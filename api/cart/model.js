@@ -57,12 +57,11 @@ const cartSchema = new mongoose.Schema(
 //
 // 🔄 Auto populate product details
 //
-cartSchema.pre(["find", "findOne"], function (next) {
+cartSchema.pre(["find", "findOne"], function () {
   this.populate(
     "cartItems.productId",
     "title imgCover price priceAfterDiscount quantity"
   );
-  next();
 });
 
 //

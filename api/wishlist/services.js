@@ -23,7 +23,7 @@ const addToWishlistService = async (userId, productId) => {
  );
 
  if (exists) {
-    return { alreadyExits: true, wishlist };
+    return { alreadyExists: true, wishlist };
  }
 
  wishlist.products.push({ productId });
@@ -38,7 +38,7 @@ const removeFromWishlistService = async (userId, productId) => {
     if (!wishlist) return null;
 
     wishlist.products = wishlist.products.filter(
-        (item) => item.productId.toString() !== productId
+        (item) => item.productId.toString() !== productId.toString()
     );
 
     await wishlist.save();

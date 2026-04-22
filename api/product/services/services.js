@@ -1,14 +1,54 @@
-const Model = require("../model/model");
+const Product = require("../model/model");
 const slugify = require("slugify");
+const mongoose = require("mongoose");
+
+const applyDynamicDiscountFields = (data = {}) => {
+    if (!data) return data;
+    const price = Number(data.price);
+    const hasPrice = Number.isFinite(price) && price > 0;
+
+    const hasPriceAfterDiscount =
+        data.priceAfterDiscount !== undefined &&
+        data.priceAfterDiscount !== null &&
+        data.priceAfterDiscount !== "" &&
+        Number.isFinite(Number(data.priceAfterDiscount));
+
+    const hasDiscountPercentage =
+        data.discountPercentage !== undefined &&
+        data.discountPercentage !== null &&
+        data.discountPercentage !== "" &&
+        Number.isFinite(Number(data.discountPercentage));
+
+    if (!hasPrice) return data;
+
+    if (hasPriceAfterDiscount) {
+        const pad = Math.max(0, Math.min(price, Number(data.priceAfterDiscount)));
+        data.priceAfterDiscount = pad;
+        data.discountPercentage = Math.round(((price - pad) / price) * 100);
+        return data;
+    }
+
+    if (hasDiscountPercentage) {
+        const pct = Math.max(0, Math.min(100, Number(data.discountPercentage)));
+        data.discountPercentage = pct;
+        data.priceAfterDiscount = Number((price - (price * pct) / 100).toFixed(2));
+        return data;
+    }
+
+    data.priceAfterDiscount = price;
+    data.discountPercentage = 0;
+    return data;
+};
 
 const createProductService = async (data) => {
     if (data.title) {
         data.slug = slugify(data.title, { lower: true, strict: true });
     }
-    return await Model.create(data);
+    applyDynamicDiscountFields(data);
+    return await Product.create(data);
 };
 
-const getAllProductService = async (queryParams = {}) => {
+const getAllProductsService = async (queryParams = {}) => {
     const {
         page = 1,
         limit = 10,
@@ -78,18 +118,32 @@ const getProductByIdService = async (id) => {
         .populate("brand", "name slug logo");   
 };
 
-const getProductBySlugService = async (slug) =>
-{
-    return await Product.findOne({ slug })
-    .populate("category","name slug")
-    .populate("subcategory","name slug")
-    .populate("brand","name slug logo");
+const getProductBySlugService = async (slugOrId) => {
+    const lookup = String(slugOrId || "").trim();
+    if (!lookup) return null;
+
+    const bySlug = await Product.findOne({ slug: lookup.toLowerCase() })
+        .populate("category", "name slug")
+        .populate("subcategory", "name slug")
+        .populate("brand", "name slug logo");
+
+    if (bySlug) return bySlug;
+
+    if (mongoose.Types.ObjectId.isValid(lookup)) {
+        return await Product.findById(lookup)
+            .populate("category", "name slug")
+            .populate("subcategory", "name slug")
+            .populate("brand", "name slug logo");
+    }
+
+    return null;
 };
 
 const updateProductService = async (id, data) => {
     if (data.title) {
         data.slug = slugify(data.title, { lower: true, strict: true });
     }
+    applyDynamicDiscountFields(data);
     return await Product.findByIdAndUpdate(id, data, {
         new: true,
         runValidators: true,
@@ -148,7 +202,7 @@ const products = await Product.find({ category: categoryId, isActive: true })
     };
 };
 
-const getRelatedProductsService = async (ProductId, limit = 6) => {
+const getRelatedProductsService = async (productId, limit = 6) => {
     const product = await Product.findById(productId);
     if (!product) return [];
 
@@ -187,7 +241,7 @@ const updateProductStockService = async (id, quantity, operation = "decrease") =
   
 module.exports = {
     createProductService,
-    getAllProductService,
+    getAllProductsService,
     getProductByIdService,
     getProductBySlugService,
     updateProductService,

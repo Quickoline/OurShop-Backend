@@ -14,12 +14,12 @@ const reviewSchema = new Schema(
         },
         productId: {
             type: Schema.ObjectId,
-            ref: "product",
+            ref: "Product",
             required: [true, "Product Id is required"],
         },
         userId: {
             type: Schema.ObjectId,
-            ref: "user",
+            ref: "User",
             required: [true, "User ID is required"],
         },
         rate: {
@@ -38,8 +38,8 @@ const reviewSchema = new Schema(
 
 
 reviewSchema.pre(["find", "findOne"], function () {
-    this.populate("userId", "name -_id");
-    this.populate("productId", "name slug -_id");
+    this.populate("userId", "name");
+    this.populate("productId", "title slug");
 });
 
 module.exports = mongoose.model("review", reviewSchema);

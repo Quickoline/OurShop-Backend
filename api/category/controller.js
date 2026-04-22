@@ -75,7 +75,7 @@ const createCategory = async (req, res) => {
 
     const getSubcategoriesByParent = async (req, res) => {
         try {
-            const categories = await getSubcategoriesByParentService(req.params.Id);
+            const categories = await getSubcategoriesByParentService(req.params.id);
             res.status(200).json({ success: true, data: categories });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });

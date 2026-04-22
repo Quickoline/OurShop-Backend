@@ -62,9 +62,9 @@ const couponSchema = new Schema(
 
     usedBy: [
       {
-        userId: { type: Schema.ObjectId, ref: "user" },
+        userId: { type: Schema.ObjectId, ref: "User" },
         usedAt: { type: Date, default: Date.now },
-        orderId: { type: Schema.ObjectId, ref: "order" },
+        orderId: { type: Schema.ObjectId, ref: "Order" },
       },
     ],
 
@@ -81,7 +81,7 @@ const couponSchema = new Schema(
 
     // Applicable scope
     applicableCategories: [{ type: Schema.ObjectId, ref: "category" }],
-    applicableProducts: [{ type: Schema.ObjectId, ref: "product" }],
+    applicableProducts: [{ type: Schema.ObjectId, ref: "Product" }],
 
     // Status
     isActive: {

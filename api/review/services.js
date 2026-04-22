@@ -1,8 +1,40 @@
 const Review = require("../review/model");
+const Product = require("../product/model/model");
+
+const recalculateProductRating = async (productId) => {
+    const stats = await Review.aggregate([
+        { $match: { productId, isActive: true } },
+        {
+            $group: {
+                _id: "$productId",
+                ratingAvg: { $avg: "$rate" },
+                ratingCount: { $sum: 1 },
+            },
+        },
+    ]);
+
+    const ratingAvg = stats[0]?.ratingAvg || 0;
+    const ratingCount = stats[0]?.ratingCount || 0;
+
+    await Product.findByIdAndUpdate(productId, {
+        ratingAvg: Number(ratingAvg.toFixed(1)),
+        ratingCount,
+    });
+};
 
 
 const createReviewService = async (data) => {
-    return await Review.create(data);
+    const existing = await Review.findOne({
+        productId: data.productId,
+        userId: data.userId,
+    });
+    if (existing) {
+        throw new Error("You have already reviewed this product");
+    }
+
+    const created = await Review.create(data);
+    await recalculateProductRating(created.productId);
+    return created;
 };
 
 
@@ -34,15 +66,23 @@ const getReviewByIdService = async (id) => {
 
 
 const updateReviewService = async (id, data) => {
-    return await Review.findByIdAndUpdate(id, data, {
+    const updated = await Review.findByIdAndUpdate(id, data, {
         new: true,
         runValidators: true,
     });
+    if (updated) {
+        await recalculateProductRating(updated.productId);
+    }
+    return updated;
 };
 
 
 const deleteReviewService = async (id) => {
-    return await Review.findByIdAndDelete(id);
+    const deleted = await Review.findByIdAndDelete(id);
+    if (deleted) {
+        await recalculateProductRating(deleted.productId);
+    }
+    return deleted;
 };
 
 module.exports = {

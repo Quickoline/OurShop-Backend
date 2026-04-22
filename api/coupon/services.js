@@ -37,7 +37,7 @@ const getCouponByIdService = async (id) => {
 const getCouponByCodeService = async (code) => {
  return await Coupon.findOne({ code: code.toUpperCase() })
  .populate("applicableCategories")
- .populate("applicableproducts");
+ .populate("applicableProducts");
 };
 
 

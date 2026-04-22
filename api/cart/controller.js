@@ -2,6 +2,8 @@ const {
     getUserCartService,
     addToCartService,
     removeFromCartService,
+    applyCouponToCartService,
+    removeCouponFromCartService,
     clearCartService,
 } = require("../cart/services");
 
@@ -55,9 +57,44 @@ const clearCart = async (req, res) => {
     }
 };
 
+const applyCoupon = async (req, res) => {
+    try {
+        const { code } = req.body;
+        if (!code) {
+            return res.status(400).json({
+                success: false,
+                message: "Coupon code is required",
+            });
+        }
+        const cart = await applyCouponToCartService(req.user.id, code);
+        res.status(200).json({
+            success: true,
+            message: "Coupon applied",
+            data: cart,
+        });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+const removeCoupon = async (req, res) => {
+    try {
+        const cart = await removeCouponFromCartService(req.user.id);
+        res.status(200).json({
+            success: true,
+            message: "Coupon removed",
+            data: cart,
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     getCart,
     addToCart,
     removeFromCart,
+    applyCoupon,
+    removeCoupon,
     clearCart,
 };

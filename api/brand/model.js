@@ -49,11 +49,10 @@ const brandSchema = new Schema(
 );
 
 
-brandSchema.pre("save", function (next) {
+brandSchema.pre("save", function () {
     if (this.name) {
         this.slug = this.name.toLowerCase().replace(/\s+/g, "-");
     }
-    next();
 });
 
 module.exports = mongoose.model("brand", brandSchema);

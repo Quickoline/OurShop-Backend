@@ -13,6 +13,7 @@ const {
     getRelatedProducts,
     searchProducts,
 } = require("../controller/controller");
+const { uploadProductMedia } = require("../middleware/uploadMedia");
 
 const router = express.Router();
 
@@ -25,10 +26,10 @@ router.get("/slug/:slug", getProductBySlug);
 router.get("/:id/related", getRelatedProducts);
 
 
-router.post("/", createProduct);
+router.post("/", uploadProductMedia, createProduct);
 router.get("/", getAllProducts);
 router.get("/:id", getProductById);
-router.put("/:id", updateProduct);
+router.put("/:id", uploadProductMedia, updateProduct);
 router.delete("/:id", deleteProduct);
 
 module.exports = router;

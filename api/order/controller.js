@@ -1,9 +1,40 @@
-const services = require("../services/services");
+const mongoose = require("mongoose");
+const services = require("./services");
+const { normalizeJwtSubjectId } = require("../../auth/auth");
+const jwt = require("jsonwebtoken");
+
+const JWT_SECRET = process.env.JWT_SECRET || "dev-jwt-secret";
+
+const resolveAuthenticatedUserId = (req) => {
+  if (req.user?.id) return String(req.user.id);
+  if (req.user?._id) return String(req.user._id);
+  const authHeader = req.headers.authorization || "";
+  const [, token] = authHeader.split(" ");
+  if (!token) return null;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return normalizeJwtSubjectId(decoded);
+  } catch {
+    return null;
+  }
+};
 
 // ================= CREATE ORDER =================
 const create = async (req, res) => {
   try {
-    const body = req.body;
+    const userId = resolveAuthenticatedUserId(req);
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required to place an order.",
+      });
+    }
+
+    const body = {
+      ...req.body,
+      // Always bind order to authenticated user (ignore client-supplied user).
+      user: userId,
+    };
 
     // Auto invoice number generate
     body.invoiceNumber = `INV-${Date.now()}`;
@@ -64,6 +95,23 @@ const getAll = async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Error fetching orders",
+      details: err.message,
+    });
+  }
+};
+
+const getMyOrders = async (req, res) => {
+  try {
+    const data = await services.getByUser(req.user.id);
+    res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: "Error fetching your orders",
       details: err.message,
     });
   }
@@ -166,6 +214,35 @@ const updateExpectedDeliveryDate = async (req, res) => {
   }
 };
 
+const cancelOrder = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const data = await services.update(
+      { orderStatus: "CANCELLED" },
+      id
+    );
+
+    if (!data) {
+      return res.status(404).json({
+        success: false,
+        error: "Order not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Order cancelled successfully",
+      data,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: "Error cancelling order",
+      details: err.message,
+    });
+  }
+};
+
 // ================= DELETE SINGLE ORDER =================
 const deleteone = async (req, res) => {
   try {
@@ -215,7 +292,9 @@ module.exports = {
   create,
   getone,
   getAll,
+  getMyOrders,
   update,
+  cancelOrder,
   assignDelivery,
   updateExpectedDeliveryDate,
   deleteone,

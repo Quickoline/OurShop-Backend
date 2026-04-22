@@ -78,7 +78,7 @@ const getCouponByCode = async (req, res) => {
 const validateCoupon = async (req, res ) => {
     try {
         const { code, orderTotal, isNewUser } = req.body;
-        const userId = req.user?._id;
+        const userId = req.user?.id;
         const result = await validateCouponService(
             code,
             userId,
@@ -107,7 +107,13 @@ const validateCoupon = async (req, res ) => {
 const applyCoupon = async (req, res) => {
     try {
         const { couponId, orderId } = req.body;
-        const userId = req.user?._id;
+        const userId = req.user?.id;
+        if (!couponId || !orderId) {
+            return res.status(400).json({
+                success: false,
+                message: "couponId and orderId are required",
+            });
+        }
         const coupon = await applyCouponService(couponId, userId, orderId);
         if (!coupon) {
             return res

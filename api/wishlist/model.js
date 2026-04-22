@@ -5,7 +5,7 @@ const wishlistSchema = new Schema(
   {
     userId: {
       type: Schema.ObjectId,
-      ref: "user",
+      ref: "User",
       required: true,
     },
 
@@ -13,7 +13,7 @@ const wishlistSchema = new Schema(
       {
         productId: {
           type: Schema.ObjectId,
-          ref: "product",
+          ref: "Product",
           required: true,
         },
 
@@ -33,9 +33,8 @@ wishlistSchema.index({ userId: 1 }, { unique: true });
 
 
 // Auto populate product details
-wishlistSchema.pre(["find", "findOne"], function (next) {
+wishlistSchema.pre(["find", "findOne"], function () {
   this.populate("products.productId");
-  next();
 });
 
 
