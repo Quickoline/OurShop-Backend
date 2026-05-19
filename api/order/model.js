@@ -12,22 +12,27 @@ const orderSchema = new mongoose.Schema(
     // Ordered Items
     orderItems: [
       {
+        itemType: {
+          type: String,
+          enum: ["product", "service"],
+          default: "product",
+        },
         product: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Product",
-          required: true,
         },
-
+        service: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Service",
+        },
         title: String,
         Discription: String,
         image: String,
-
         quantity: {
           type: Number,
           required: true,
           min: 1,
         },
-        
         price: {
           type: Number,
           required: true,
@@ -75,7 +80,7 @@ const orderSchema = new mongoose.Schema(
     // Payment
     paymentMethod: {
       type: String,
-      enum: ["COD", "CARD", "UPI", "NETBANKING", "RAZORPAY"],
+      enum: ["CARD", "UPI", "NETBANKING", "RAZORPAY"],
       required: true,
     },
     paymentResult: {

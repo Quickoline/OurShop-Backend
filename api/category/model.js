@@ -76,7 +76,7 @@ categorySchema.virtual("subcategories", {
 
 // 🖼️ Add full image URL automatically
 categorySchema.post("init", function (doc) {
-  if (doc.image) {
+  if (doc.image && !String(doc.image).startsWith("http")) {
     doc.image = `${process.env.BASE_URL}category/${doc.image}`;
   }
 });

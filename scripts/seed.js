@@ -1,16 +1,20 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
+const slugify = require("slugify");
 const connectDB = require("../config/db");
 
 const User = require("../api/user/model/model");
 const Category = require("../api/category/model");
 const Brand = require("../api/brand/model");
 const Product = require("../api/product/model/model");
+const Service = require("../api/service/model/model");
 const Coupon = require("../api/coupon/model");
 const Review = require("../api/review/model");
 const Order = require("../api/order/model");
 const Cart = require("../api/cart/model");
 const Wishlist = require("../api/wishlist/model");
+
+const { categories, brands, products, services } = require("./catalogSeedData");
 
 const clearCollections = async () => {
   await Promise.all([
@@ -20,6 +24,7 @@ const clearCollections = async () => {
     Wishlist.deleteMany({}),
     Coupon.deleteMany({}),
     Product.deleteMany({}),
+    Service.deleteMany({}),
     Brand.deleteMany({}),
     Category.deleteMany({}),
     User.deleteMany({}),
@@ -75,110 +80,87 @@ const seedData = async () => {
     },
   ]);
 
-  const [categoryOne, categoryTwo] = await Category.create([
-    {
-      name: "Supplements",
-      slug: "supplements",
-      description: "Nutrition and supplement products for daily fitness goals.",
+  const categoryDocs = await Category.insertMany(
+    categories.map((c) => ({
+      ...c,
       isActive: true,
-      showInNav: true,
-    },
-    {
-      name: "Equipment",
-      slug: "equipment",
-      description: "Workout accessories and equipment for home and gym use.",
-      isActive: true,
-      showInNav: true,
-    },
-  ]);
+    }))
+  );
+  const categoryBySlug = Object.fromEntries(
+    categoryDocs.map((c) => [c.slug, c])
+  );
 
-  const [brandOne, brandTwo] = await Brand.create([
-    {
-      name: "PowerFuel",
-      description: "Premium quality sports nutrition brand.",
-      country: "India",
-      isFeatured: true,
+  const brandDocs = await Brand.insertMany(
+    brands.map((b) => ({
+      ...b,
       isActive: true,
-    },
-    {
-      name: "FitCore",
-      description: "Trusted fitness equipment and wellness products.",
-      country: "India",
-      isFeatured: false,
-      isActive: true,
-    },
-  ]);
+    }))
+  );
+  const brandBySlug = Object.fromEntries(brandDocs.map((b) => [b.slug, b]));
 
-  const [productOne, productTwo, productThree, productFour] = await Product.create([
-    {
-      title: "Whey Protein Isolate 1kg",
-      description: "High purity whey isolate for muscle recovery and lean strength gain.",
-      price: 2999,
-      priceAfterDiscount: 2499,
-      quantity: 120,
-      unit: "pcs",
-      category: categoryOne._id,
-      subcategory: categoryOne._id,
-      brand: brandOne._id,
-      tags: ["bestseller"],
-      isBestSeller: true,
-      benefits: ["Fast absorption", "High protein per serving"],
-      ingredients: ["Whey isolate", "Natural flavors", "Stevia"],
-      howToUse: "Mix one scoop with water after workout.",
-      isActive: true,
-    },
-    {
-      title: "Mass Gainer Advanced 2kg",
-      description: "Calorie dense formula for healthy weight gain and performance energy.",
-      price: 3499,
-      priceAfterDiscount: 3199,
-      quantity: 80,
-      unit: "pcs",
-      category: categoryOne._id,
-      subcategory: categoryOne._id,
-      brand: brandOne._id,
-      tags: ["mega_offer"],
-      isMegaOffer: true,
-      benefits: ["High calorie blend", "Added creatine support"],
-      ingredients: ["Protein blend", "Complex carbs", "Vitamins"],
-      howToUse: "Blend two scoops with milk between meals.",
-      isActive: true,
-    },
-    {
-      title: "Yoga Mat Pro Grip",
-      description: "Non slip yoga mat with extra cushioning for comfort and joint safety.",
-      price: 1499,
-      priceAfterDiscount: 1199,
-      quantity: 200,
-      unit: "pcs",
-      category: categoryTwo._id,
-      subcategory: categoryTwo._id,
-      brand: brandTwo._id,
-      tags: ["newly_launched"],
-      isNewlyLaunched: true,
-      benefits: ["Anti slip surface", "Easy to clean material"],
-      ingredients: ["TPE"],
-      howToUse: "Use on flat floor for yoga and stretching sessions.",
-      isActive: true,
-    },
-    {
-      title: "Resistance Band Set",
-      description: "Multiple resistance levels for strength training and mobility workouts.",
-      price: 999,
-      priceAfterDiscount: 799,
-      quantity: 250,
-      unit: "set",
-      category: categoryTwo._id,
-      subcategory: categoryTwo._id,
-      brand: brandTwo._id,
-      tags: ["combo"],
-      isCombo: true,
-      benefits: ["Portable", "Progressive resistance levels"],
-      ingredients: ["Latex"],
-      howToUse: "Choose a band level and perform pull or stretch sets.",
-      isActive: true,
-    },
-  ]);
+  const productDocs = await Product.insertMany(
+    products.map((p) => {
+      const cat = categoryBySlug[p.categorySlug];
+      const brand = brandBySlug[p.brandSlug];
+      return {
+        title: p.title,
+        slug: slugify(p.title, { lower: true, strict: true }),
+        description: p.description,
+        price: p.price,
+        priceAfterDiscount: p.priceAfterDiscount ?? p.price,
+        quantity: p.quantity,
+        unit: "pcs",
+        imgCover: p.imgCover,
+        images: p.images || [],
+        category: cat._id,
+        subcategory: cat._id,
+        brand: brand._id,
+        tags: p.tags || [],
+        isBestSeller: !!p.isBestSeller,
+        isNewlyLaunched: !!p.isNewlyLaunched,
+        isMegaOffer: !!p.isMegaOffer,
+        isCombo: !!p.isCombo,
+        ratingAvg: p.ratingAvg ?? 0,
+        ratingCount: p.ratingCount ?? 0,
+        isActive: true,
+      };
+    })
+  );
+
+  const serviceDocs = await Service.insertMany(
+    services.map((s) => {
+      const cat = categoryBySlug[s.categorySlug];
+      const brand = brandBySlug[s.brandSlug];
+      return {
+        title: s.title,
+        slug: slugify(s.title, { lower: true, strict: true }),
+        description: s.description,
+        price: s.price,
+        priceAfterDiscount: s.priceAfterDiscount ?? s.price,
+        capacity: s.capacity ?? 0,
+        booked: 0,
+        duration: s.duration,
+        unit: "session",
+        imgCover: s.imgCover,
+        images: s.images || [],
+        category: cat._id,
+        subcategory: cat._id,
+        brand: brand._id,
+        tags: s.tags || (s.isFeatured ? ["featured"] : []),
+        isBestSeller: !!s.isBestSeller,
+        isFeatured: !!s.isFeatured || !!s.isBestSeller,
+        isNewlyLaunched: !!s.isNewlyLaunched,
+        isMegaOffer: !!s.isMegaOffer,
+        isCombo: !!s.isCombo,
+        ratingAvg: s.ratingAvg ?? 0,
+        ratingCount: s.ratingCount ?? 0,
+        isActive: true,
+      };
+    })
+  );
+
+  const [productOne, productTwo, productThree] = productDocs;
+  const [serviceOne, serviceTwo] = serviceDocs;
 
   userOne.wishlist = [productOne._id, productThree._id];
   userTwo.wishlist = [productTwo._id];
@@ -199,68 +181,70 @@ const seedData = async () => {
     userId: userOne._id,
     cartItems: [
       {
+        itemType: "product",
         productId: productOne._id,
         quantity: 1,
         price: productOne.price,
         priceAfterDiscount: productOne.priceAfterDiscount,
       },
       {
-        productId: productFour._id,
-        quantity: 2,
-        price: productFour.price,
-        priceAfterDiscount: productFour.priceAfterDiscount,
+        itemType: "service",
+        serviceId: serviceOne._id,
+        quantity: 1,
+        price: serviceOne.price,
+        priceAfterDiscount: serviceOne.priceAfterDiscount,
       },
     ],
   });
   cartOne.calculateTotals();
   await cartOne.save();
 
+  const electronicsCat = categoryBySlug.electronics;
+  const homeServicesCat = categoryBySlug["home-services"];
+
   await Coupon.create([
     {
       code: "WELCOME10",
-      description: "Flat welcome discount for first orders.",
+      description: "10% off your first order",
       discountType: "percentage",
       discountValue: 10,
       minOrderValue: 999,
       maxDiscount: 500,
       isNewUserOnly: true,
-      usageLimit: 200,
+      usageLimit: 500,
       usageLimitPerUser: 1,
       expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 90),
-      applicableCategories: [categoryOne._id],
-      applicableProducts: [productOne._id, productTwo._id],
+      applicableCategories: [electronicsCat._id],
       isActive: true,
     },
     {
-      code: "FIT200",
-      description: "Fixed 200 off on selected accessories.",
+      code: "SAVE200",
+      description: "Flat ₹200 off orders above ₹1999",
       discountType: "fixed",
       discountValue: 200,
-      minOrderValue: 1000,
+      minOrderValue: 1999,
       usageLimit: 500,
-      usageLimitPerUser: 2,
+      usageLimitPerUser: 3,
       expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 120),
-      applicableCategories: [categoryTwo._id],
-      applicableProducts: [productThree._id, productFour._id],
       isActive: true,
     },
   ]);
 
   await Review.create([
     {
-      title: "Excellent quality",
-      text: "Very effective protein. Mixes well and helped my recovery.",
+      title: "Great sound",
+      text: "Earbuds are comfortable and battery lasts all day.",
       productId: productOne._id,
       userId: userOne._id,
       rate: 5,
       isActive: true,
     },
     {
-      title: "Great for home workouts",
-      text: "Bands are strong and useful for daily full body sessions.",
-      productId: productFour._id,
+      title: "Perfect for runs",
+      text: "Running shoes are light and supportive.",
+      productId: productDocs[3]._id,
       userId: userTwo._id,
-      rate: 4,
+      rate: 5,
       isActive: true,
     },
   ]);
@@ -270,18 +254,22 @@ const seedData = async () => {
       user: userOne._id,
       orderItems: [
         {
+          itemType: "product",
           product: productOne._id,
           title: productOne.title,
           Discription: productOne.description,
+          image: productOne.imgCover,
           quantity: 1,
           price: productOne.priceAfterDiscount,
         },
         {
-          product: productFour._id,
-          title: productFour.title,
-          Discription: productFour.description,
-          quantity: 2,
-          price: productFour.priceAfterDiscount,
+          itemType: "product",
+          product: productTwo._id,
+          title: productTwo.title,
+          Discription: productTwo.description,
+          image: productTwo.imgCover,
+          quantity: 1,
+          price: productTwo.priceAfterDiscount,
         },
       ],
       shippingAddress: {
@@ -293,12 +281,12 @@ const seedData = async () => {
         pincode: 560001,
         country: "India",
       },
-      itemsPrice: productOne.priceAfterDiscount + productFour.priceAfterDiscount * 2,
-      taxPrice: 120,
-      shippingPrice: 60,
-      discountPrice: 100,
-      totalPrice: productOne.priceAfterDiscount + productFour.priceAfterDiscount * 2 + 80,
-      paymentMethod: "COD",
+      itemsPrice: productOne.priceAfterDiscount + productTwo.priceAfterDiscount,
+      taxPrice: 0,
+      shippingPrice: 0,
+      discountPrice: 0,
+      totalPrice: productOne.priceAfterDiscount + productTwo.priceAfterDiscount,
+      paymentMethod: "RAZORPAY",
       isPaid: false,
       orderStatus: "PLACED",
       invoiceNumber: `INV-${Date.now()}`,
@@ -307,11 +295,22 @@ const seedData = async () => {
       user: userTwo._id,
       orderItems: [
         {
-          product: productThree._id,
-          title: productThree.title,
-          Discription: productThree.description,
+          itemType: "service",
+          service: serviceOne._id,
+          title: serviceOne.title,
+          Discription: serviceOne.description,
+          image: serviceOne.imgCover,
           quantity: 1,
-          price: productThree.priceAfterDiscount,
+          price: serviceOne.priceAfterDiscount,
+        },
+        {
+          itemType: "service",
+          service: serviceTwo._id,
+          title: serviceTwo.title,
+          Discription: serviceTwo.description,
+          image: serviceTwo.imgCover,
+          quantity: 1,
+          price: serviceTwo.priceAfterDiscount,
         },
       ],
       shippingAddress: {
@@ -323,11 +322,11 @@ const seedData = async () => {
         pincode: 500034,
         country: "India",
       },
-      itemsPrice: productThree.priceAfterDiscount,
-      taxPrice: 40,
-      shippingPrice: 40,
+      itemsPrice: serviceOne.priceAfterDiscount + serviceTwo.priceAfterDiscount,
+      taxPrice: 0,
+      shippingPrice: 0,
       discountPrice: 0,
-      totalPrice: productThree.priceAfterDiscount + 80,
+      totalPrice: serviceOne.priceAfterDiscount + serviceTwo.priceAfterDiscount,
       paymentMethod: "UPI",
       isPaid: true,
       paymentResult: {
@@ -340,13 +339,13 @@ const seedData = async () => {
     },
   ]);
 
-  console.log("Seed completed.");
-  console.log("Admin login:");
-  console.log("email: admin@shop.com");
-  console.log(`password: ${adminPassword}`);
-  console.log("User login examples:");
-  console.log("rahul@shop.com / " + userPassword);
-  console.log("priya@shop.com / " + userPassword);
+  console.log("Seed completed successfully.");
+  console.log(`Categories: ${categoryDocs.length}`);
+  console.log(`Brands: ${brandDocs.length}`);
+  console.log(`Products: ${productDocs.length}`);
+  console.log(`Services: ${serviceDocs.length}`);
+  console.log("\nAdmin login: admin@shop.com / " + adminPassword);
+  console.log("Users: rahul@shop.com, priya@shop.com / " + userPassword);
 };
 
 const run = async () => {
@@ -364,6 +363,7 @@ const run = async () => {
     await seedData();
   } catch (error) {
     console.error("Seed failed:", error.message);
+    if (error.stack) console.error(error.stack);
     process.exitCode = 1;
   } finally {
     await mongoose.connection.close();

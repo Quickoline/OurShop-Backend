@@ -1,19 +1,25 @@
- const mongoose = require("mongoose");
+const mongoose = require("mongoose");
 
 const cartItemSchema = new mongoose.Schema({
+  itemType: {
+    type: String,
+    enum: ["product", "service"],
+    default: "product",
+  },
   productId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Product",
-    required: true,
   },
-
+  serviceId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Service",
+  },
   quantity: {
     type: Number,
     default: 1,
     min: 1,
   },
-
-  price: Number, // price when added to cart
+  price: Number,
   priceAfterDiscount: Number,
   totalProductDiscount: Number,
 });
@@ -24,28 +30,22 @@ const cartSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true, // one cart per user
+      unique: true,
     },
-
     cartItems: [cartItemSchema],
-
     totalPrice: {
       type: Number,
       default: 0,
     },
-
     totalPriceAfterDiscount: {
       type: Number,
       default: 0,
     },
-
     discount: {
       type: Number,
       default: 0,
     },
-
     couponCode: String,
-
     couponDiscount: {
       type: Number,
       default: 0,
@@ -54,19 +54,16 @@ const cartSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-//
-// 🔄 Auto populate product details
-//
 cartSchema.pre(["find", "findOne"], function () {
   this.populate(
     "cartItems.productId",
-    "title imgCover price priceAfterDiscount quantity"
+    "title imgCover price priceAfterDiscount quantity slug"
+  ).populate(
+    "cartItems.serviceId",
+    "title imgCover price priceAfterDiscount capacity slug duration"
   );
 });
 
-//
-// 🧮 Calculate totals method
-//
 cartSchema.methods.calculateTotals = function () {
   let totalPrice = 0;
   let totalDiscount = 0;
