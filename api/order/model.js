@@ -37,8 +37,30 @@ const orderSchema = new mongoose.Schema(
           type: Number,
           required: true,
         },
+        profitAmount: {
+          type: Number,
+          default: 0,
+          min: 0,
+        },
       },
     ],
+
+    commissionDistributed: {
+      type: Boolean,
+      default: false,
+    },
+    mlmProfitTotal: {
+      type: Number,
+      default: 0,
+    },
+    adminProfitShare: {
+      type: Number,
+      default: 0,
+    },
+    mlmProfitShare: {
+      type: Number,
+      default: 0,
+    },
 
     // Address
     shippingAddress: {

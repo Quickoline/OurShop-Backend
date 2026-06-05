@@ -131,15 +131,24 @@ const update = async (req, res) => {
       });
     }
 
+    let message = "Order updated successfully";
+    if (data?._mlm?.ok) {
+      message = "Order updated and MLM commissions distributed";
+    } else if (data?._mlm?.message) {
+      message = `Order updated. ${data._mlm.message}`;
+    }
+
     res.status(200).json({
       success: true,
-      message: "Order updated successfully",
+      message,
       data,
+      mlm: data?._mlm || null,
     });
   } catch (err) {
     res.status(500).json({
       success: false,
       error: "Error updating order",
+      message: err.message,
       details: err.message,
     });
   }

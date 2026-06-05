@@ -49,6 +49,26 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
+    referralCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      uppercase: true,
+    },
+
+    sponsor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    walletBalance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
     wishlist: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -68,6 +88,22 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+const { generateReferralCode } = require("../../mlm/code");
+
+// Referral code on new users
+userSchema.pre("save", async function () {
+  if (this.isNew && !this.referralCode && this.role === "user") {
+    let code;
+    let exists = true;
+    const User = mongoose.model("User");
+    while (exists) {
+      code = generateReferralCode(this.name);
+      exists = await User.exists({ referralCode: code });
+    }
+    this.referralCode = code;
+  }
+});
 
 // 🔐 Hash password before save
 userSchema.pre("save", async function () {

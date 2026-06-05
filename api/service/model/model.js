@@ -36,6 +36,12 @@ const serviceSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    /** Per-unit profit for MLM (50% admin / 50% upline), same as products */
+    profitAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     discountPercentage: {
       type: Number,
       default: 0,

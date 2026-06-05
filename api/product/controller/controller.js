@@ -41,7 +41,7 @@ const parseMaybeJsonObjectArray = (value) => {
 
 const parseProductBody = (body) => {
     const parsed = { ...body };
-    const numberFields = ["price", "priceAfterDiscount", "quantity", "sold"];
+    const numberFields = ["price", "priceAfterDiscount", "profitAmount", "quantity", "sold"];
     const booleanFields = ["isBestSeller", "isNewlyLaunched", "isMegaOffer", "isCombo", "isActive"];
 
     numberFields.forEach((field) => {

@@ -7,7 +7,10 @@
     "start": "node server.js",
     "seed": "node scripts/seed.js",
     "seed:reset": "node scripts/seed.js --reset",
-    "seed:product:detailed": "node scripts/seedDetailedProduct.js"
+    "seed:product:detailed": "node scripts/seedDetailedProduct.js",
+    "mlm:redistribute": "node scripts/redistributeMlm.js",
+    "mlm:repair-payouts": "node scripts/repairInvalidMlmPayouts.js",
+    "reset:testing": "node scripts/resetTestingData.js"
   },
   "keywords": [],
   "author": "",

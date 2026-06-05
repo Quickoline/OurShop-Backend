@@ -1,7 +1,29 @@
 const User = require("../model/model");
+const { resolveSponsorByCode } = require("../../mlm/referral");
 
 const createUserService = async (data) => {
-    return await User.create(data);
+    const payload = { ...data };
+
+    if (payload.referralCode && payload.role !== "admin") {
+        const sponsor = await resolveSponsorByCode(payload.referralCode);
+        if (!sponsor) {
+            throw new Error("Invalid referral code");
+        }
+        if (String(sponsor._id) === String(payload._id)) {
+            throw new Error("Cannot use your own referral code");
+        }
+        payload.sponsor = sponsor._id;
+        delete payload.referralCode;
+    } else if (payload.referralCode) {
+        delete payload.referralCode;
+    }
+
+    if (payload.role !== "admin" && !payload.sponsor && payload.sponsorId) {
+        payload.sponsor = payload.sponsorId;
+        delete payload.sponsorId;
+    }
+
+    return await User.create(payload);
 };
 
 const getAllUsersService = async (queryParams = {}) => {
@@ -34,6 +56,7 @@ const getAllUsersService = async (queryParams = {}) => {
 
     const users = await User.find(filter)
     .select("-password -passwordResetToken -passwordResetExpires")
+    .populate("sponsor", "name email referralCode")
     .populate("wishlist", "title slug imgCover price")
     .sort(sort)
     .skip(skip)
@@ -57,6 +80,7 @@ const getAllUsersService = async (queryParams = {}) => {
 const getUserByIdService = async (id) => {
     return await User.findById(id)
     .select("-password -passwordResetToken -passwordResetExpires")
+    .populate("sponsor", "name email referralCode")
     .populate("wishlist", "title slug imgCover price priceAfterDiscount");
 };
 

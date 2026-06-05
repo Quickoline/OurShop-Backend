@@ -47,6 +47,7 @@ const create = async (body) => {
       item.itemType = "service";
       item.service = refId;
       item.product = undefined;
+      item.profitAmount = Number(service.profitAmount || 0);
     } else {
       const product = await Product.findById(refId);
       if (!product || product.isActive === false) {
@@ -58,6 +59,7 @@ const create = async (body) => {
       item.itemType = "product";
       item.product = refId;
       item.service = undefined;
+      item.profitAmount = Number(product.profitAmount || 0);
     }
   }
 
@@ -124,8 +126,37 @@ const getByUser = async (userId) => {
     .sort({ createdAt: -1 });
 };
 
+const { distributeOrderCommissions } = require("../mlm/distribute");
+
+const tryMlmDistribution = async (orderId) => {
+  const result = await distributeOrderCommissions(orderId);
+  if (result?.distributed) return { ok: true, result };
+  if (result?.skipped) {
+    return { ok: false, result, message: `MLM skipped: ${result.reason}` };
+  }
+  return { ok: false, result, message: "MLM distribution did not run" };
+};
+
 const update = async (body, id) => {
-  return await Model.findByIdAndUpdate(id, body, { new: true });
+  const payload = { ...body };
+  if (payload.orderStatus === "DELIVERED" && !payload.deliveredAt) {
+    payload.deliveredAt = new Date();
+  }
+
+  const updated = await Model.findByIdAndUpdate(id, payload, { new: true });
+  if (!updated) return null;
+
+  const needsMlm =
+    updated.orderStatus === "DELIVERED" && !updated.commissionDistributed;
+
+  if (needsMlm) {
+    const mlm = await tryMlmDistribution(updated._id);
+    const fresh = await Model.findById(id);
+    if (fresh) fresh._mlm = mlm;
+    return fresh;
+  }
+
+  return updated;
 };
 
 const updateExpectedDelivery = async (id, date) => {

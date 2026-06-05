@@ -45,6 +45,7 @@ const parseServiceBody = (body) => {
   const numberFields = [
     "price",
     "priceAfterDiscount",
+    "profitAmount",
     "capacity",
     "booked",
     "discountPercentage",

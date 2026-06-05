@@ -11,6 +11,8 @@ const Service = require("../api/service/model/model");
 const Coupon = require("../api/coupon/model");
 const Review = require("../api/review/model");
 const Order = require("../api/order/model");
+const WalletTransaction = require("../api/wallet/model");
+const { distributeOrderCommissions } = require("../api/mlm/distribute");
 const Cart = require("../api/cart/model");
 const Wishlist = require("../api/wishlist/model");
 
@@ -20,6 +22,7 @@ const clearCollections = async () => {
   await Promise.all([
     Review.deleteMany({}),
     Order.deleteMany({}),
+    WalletTransaction.deleteMany({}),
     Cart.deleteMany({}),
     Wishlist.deleteMany({}),
     Coupon.deleteMany({}),
@@ -35,22 +38,24 @@ const seedData = async () => {
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || "Admin@123";
   const userPassword = process.env.SEED_USER_PASSWORD || "User@123";
 
-  const [admin, userOne, userTwo] = await User.create([
-    {
-      name: "Super Admin",
-      email: "admin@shop.com",
-      password: adminPassword,
-      role: "admin",
-      verified: true,
-      isActive: true,
-    },
-    {
+  const admin = await User.create({
+    name: "Super Admin",
+    email: "admin@shop.com",
+    password: adminPassword,
+    role: "admin",
+    verified: true,
+    isActive: true,
+    referralCode: "HEADADMIN",
+  });
+
+  const userOne = await User.create({
       name: "Rahul Kumar",
       email: "rahul@shop.com",
       password: userPassword,
       role: "user",
       verified: true,
       isActive: true,
+      referralCode: "RAHUL01",
       addresses: [
         {
           city: "Bengaluru",
@@ -60,14 +65,17 @@ const seedData = async () => {
           phone: "9876543210",
         },
       ],
-    },
-    {
+  });
+
+  const userTwo = await User.create({
       name: "Priya Singh",
       email: "priya@shop.com",
       password: userPassword,
       role: "user",
       verified: true,
       isActive: true,
+      sponsor: userOne._id,
+      referralCode: "PRIYA01",
       addresses: [
         {
           city: "Hyderabad",
@@ -77,8 +85,7 @@ const seedData = async () => {
           phone: "9123456780",
         },
       ],
-    },
-  ]);
+  });
 
   const categoryDocs = await Category.insertMany(
     categories.map((c) => ({
@@ -108,6 +115,7 @@ const seedData = async () => {
         description: p.description,
         price: p.price,
         priceAfterDiscount: p.priceAfterDiscount ?? p.price,
+        profitAmount: p.profitAmount ?? Math.round((p.priceAfterDiscount ?? p.price) * 0.25),
         quantity: p.quantity,
         unit: "pcs",
         imgCover: p.imgCover,
@@ -137,6 +145,7 @@ const seedData = async () => {
         description: s.description,
         price: s.price,
         priceAfterDiscount: s.priceAfterDiscount ?? s.price,
+        profitAmount: s.profitAmount ?? Math.round((s.priceAfterDiscount ?? s.price) * 0.25),
         capacity: s.capacity ?? 0,
         booked: 0,
         duration: s.duration,
@@ -249,7 +258,7 @@ const seedData = async () => {
     },
   ]);
 
-  await Order.create([
+  const seededOrders = await Order.create([
     {
       user: userOne._id,
       orderItems: [
@@ -261,6 +270,7 @@ const seedData = async () => {
           image: productOne.imgCover,
           quantity: 1,
           price: productOne.priceAfterDiscount,
+          profitAmount: productOne.profitAmount || 0,
         },
         {
           itemType: "product",
@@ -270,6 +280,7 @@ const seedData = async () => {
           image: productTwo.imgCover,
           quantity: 1,
           price: productTwo.priceAfterDiscount,
+          profitAmount: productTwo.profitAmount || 0,
         },
       ],
       shippingAddress: {
@@ -337,7 +348,88 @@ const seedData = async () => {
       orderStatus: "CONFIRMED",
       invoiceNumber: `INV-${Date.now() + 1}`,
     },
+    {
+      user: userTwo._id,
+      orderItems: [
+        {
+          itemType: "product",
+          product: productOne._id,
+          title: productOne.title,
+          quantity: 2,
+          price: productOne.priceAfterDiscount,
+          profitAmount: productOne.profitAmount || 0,
+        },
+      ],
+      shippingAddress: {
+        fullName: "Priya Singh",
+        phone: 9123456780,
+        addressLine: "Banjara Hills",
+        city: "Hyderabad",
+        state: "Telangana",
+        pincode: 500034,
+        country: "India",
+      },
+      itemsPrice: productOne.priceAfterDiscount * 2,
+      taxPrice: 0,
+      shippingPrice: 0,
+      discountPrice: 0,
+      totalPrice: productOne.priceAfterDiscount * 2,
+      paymentMethod: "RAZORPAY",
+      isPaid: true,
+      paymentResult: {
+        transactionId: `TXN-MLM-${Date.now()}`,
+        status: "success",
+        paidAt: new Date(),
+      },
+      orderStatus: "DELIVERED",
+      invoiceNumber: `INV-MLM-${Date.now()}`,
+      commissionDistributed: false,
+    },
+    {
+      user: userTwo._id,
+      orderItems: [
+        {
+          itemType: "service",
+          service: serviceOne._id,
+          title: serviceOne.title,
+          quantity: 1,
+          price: serviceOne.priceAfterDiscount,
+          profitAmount: serviceOne.profitAmount || 0,
+        },
+      ],
+      shippingAddress: {
+        fullName: "Priya Singh",
+        phone: 9123456780,
+        addressLine: "Banjara Hills",
+        city: "Hyderabad",
+        state: "Telangana",
+        pincode: 500034,
+        country: "India",
+      },
+      itemsPrice: serviceOne.priceAfterDiscount,
+      taxPrice: 0,
+      shippingPrice: 0,
+      discountPrice: 0,
+      totalPrice: serviceOne.priceAfterDiscount,
+      paymentMethod: "UPI",
+      isPaid: true,
+      orderStatus: "DELIVERED",
+      deliveredAt: new Date(),
+      invoiceNumber: `INV-MLM-SVC-${Date.now()}`,
+      commissionDistributed: false,
+    },
   ]);
+
+  for (const mlmDemoOrder of seededOrders.filter((o) =>
+    String(o.invoiceNumber || "").startsWith("INV-MLM")
+  )) {
+    try {
+      const dist = await distributeOrderCommissions(mlmDemoOrder._id);
+      console.log(`MLM demo (${mlmDemoOrder.invoiceNumber}):`, dist);
+    } catch (err) {
+      console.warn(`MLM demo skipped (${mlmDemoOrder.invoiceNumber}):`, err.message);
+    }
+  }
 
   console.log("Seed completed successfully.");
   console.log(`Categories: ${categoryDocs.length}`);

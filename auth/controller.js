@@ -4,12 +4,16 @@ const { sendPasswordResetEmail } = require("./mailer");
 
 const sanitizeUser = (user) => ({
   id: user._id,
+  _id: user._id,
   name: user.name,
   email: user.email,
   role: user.role,
   blocked: user.blocked,
   isActive: user.isActive,
   verified: user.verified,
+  referralCode: user.referralCode,
+  walletBalance: user.walletBalance ?? 0,
+  sponsor: user.sponsor,
 });
 
 const login = async (req, res, requiredRole = null) => {
@@ -79,7 +83,9 @@ const adminLogin = async (req, res) => {
 
 const getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password");
+    const user = await User.findById(req.user.id)
+      .select("-password")
+      .populate("sponsor", "name email referralCode");
     if (!user) {
       return res.status(404).json({
         success: false,

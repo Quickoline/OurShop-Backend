@@ -40,6 +40,12 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    /** Per-unit profit used for MLM distribution (50% admin / 50% upline) */
+    profitAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     discountPercentage: {
       type: Number,
       default: 0,

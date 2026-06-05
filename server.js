@@ -15,6 +15,7 @@ const reviewRoutes = require("./api/review/routes");
 const cartRoutes = require("./api/cart/routes");
 const wishlistRoutes = require("./api/wishlist/routes");
 const orderRoutes = require("./api/order/routes");
+const walletRoutes = require("./api/wallet/routes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -46,6 +47,7 @@ app.use("/api/review", reviewRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/order", orderRoutes);
+app.use("/api/wallet", walletRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
