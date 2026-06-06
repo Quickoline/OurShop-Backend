@@ -1,6 +1,5 @@
 const User = require("../api/user/model/model");
 const { signToken } = require("./auth");
-const { sendPasswordResetEmail } = require("./mailer");
 
 const sanitizeUser = (user) => ({
   id: user._id,
@@ -129,36 +128,17 @@ const forgotPassword = async (req, res) => {
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
 
-    const resetUrlBase = process.env.FRONTEND_URL || `${req.protocol}://${req.get("host")}`;
+    const resetUrlBase = (
+      process.env.FRONTEND_URL || "https://quickoshop.com"
+    ).replace(/\/$/, "");
     const resetUrl = `${resetUrlBase}/reset-password/${resetToken}`;
 
-    try {
-      await sendPasswordResetEmail({
-        to: user.email,
-        resetUrl,
-      });
-    } catch (mailError) {
-      user.passwordResetToken = undefined;
-      user.passwordResetExpires = undefined;
-      await user.save({ validateBeforeSave: false });
-
-      return res.status(500).json({
-        success: false,
-        message: `Failed to send reset email: ${mailError.message}`,
-      });
-    }
-
-    const response = {
+    return res.status(200).json({
       success: true,
-      message: "If an account exists, a reset link has been sent.",
-    };
-
-    if (process.env.NODE_ENV !== "production") {
-      response.resetToken = resetToken;
-      response.resetUrl = resetUrl;
-    }
-
-    return res.status(200).json(response);
+      message:
+        "Use the reset link below to choose a new password. The link expires in 10 minutes.",
+      resetUrl,
+    });
   } catch (error) {
     return res.status(500).json({
       success: false,
