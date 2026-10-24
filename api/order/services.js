@@ -48,6 +48,7 @@ const create = async (body) => {
       item.service = refId;
       item.product = undefined;
       item.profitAmount = Number(service.profitAmount || 0);
+      item.vendor = service.vendor || null;
     } else {
       const product = await Product.findById(refId);
       if (!product || product.isActive === false) {
@@ -60,6 +61,8 @@ const create = async (body) => {
       item.product = refId;
       item.service = undefined;
       item.profitAmount = Number(product.profitAmount || 0);
+      item.vendor = product.vendor || null;
+      item.deliveryCharges = Number(product.deliveryCharges || 0);
     }
   }
 
@@ -97,6 +100,7 @@ const assignDelivery = async (id, deliveryData) => {
       deliveryPartner: deliveryData.deliveryPartner,
       trackingId: deliveryData.trackingId,
       expectedDeliveryDate: deliveryData.expectedDeliveryDate,
+      assignedDeliveryPartner: deliveryData.assignedDeliveryPartner || null,
       orderStatus: "SHIPPED",
     },
     { new: true }
@@ -110,8 +114,12 @@ const getone = async (id) => {
     .populate("orderItems.service", "title price imgCover slug duration");
 };
 
-const getAll = async () => {
-  return await Model.find({}).sort({ createdAt: -1 });
+const getAll = async (filter = {}) => {
+  return await Model.find(filter)
+    .populate("user", "name email")
+    .populate("orderItems.product", "title price imgCover slug")
+    .populate("orderItems.service", "title price imgCover slug duration")
+    .sort({ createdAt: -1 });
 };
 
 const getByUser = async (userId) => {

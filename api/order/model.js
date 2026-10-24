@@ -31,7 +31,7 @@ const orderSchema = new mongoose.Schema(
         quantity: {
           type: Number,
           required: true,
-          min: 1,
+          min: 0.001,
         },
         price: {
           type: Number,
@@ -41,6 +41,15 @@ const orderSchema = new mongoose.Schema(
           type: Number,
           default: 0,
           min: 0,
+        },
+        vendor: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          default: null,
+        },
+        deliveryCharges: {
+          type: Number,
+          default: 0,
         },
       },
     ],
@@ -140,6 +149,15 @@ const orderSchema = new mongoose.Schema(
     deliveryPartner: String,
     trackingId: String,
     expectedDeliveryDate: Date,
+    assignedDeliveryPartner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    deliveryPartnerEarning: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

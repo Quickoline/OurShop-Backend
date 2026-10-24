@@ -108,6 +108,11 @@ const serviceSchema = new mongoose.Schema(
         value: String,
       },
     ],
+    vendor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   {
     timestamps: true,

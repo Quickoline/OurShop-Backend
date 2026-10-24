@@ -49,11 +49,14 @@ const login = async (req, res, requiredRole = null) => {
       });
     }
 
-    if (requiredRole && user.role !== requiredRole) {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied for this login route.",
-      });
+    if (requiredRole) {
+      const allowedRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+      if (!allowedRoles.includes(user.role)) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied for this login route.",
+        });
+      }
     }
 
     const token = signToken(user);
@@ -77,7 +80,7 @@ const userLogin = async (req, res) => {
 };
 
 const adminLogin = async (req, res) => {
-  return login(req, res, "admin");
+  return login(req, res, ["admin", "vendor", "delivery"]);
 };
 
 const getCurrentUser = async (req, res) => {

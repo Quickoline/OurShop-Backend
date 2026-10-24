@@ -79,6 +79,10 @@ const productSchema = new mongoose.Schema(
       ],
       default: "pcs",
     },
+    deliveryCharges: {
+      type: Number,
+      default: 0,
+    },
     category: {
       type: Schema.Types.ObjectId,
       ref: "category",
@@ -147,6 +151,11 @@ const productSchema = new mongoose.Schema(
         value: String,
       },
     ],
+    vendor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
     sizeOptions: [
       {
         label: String,

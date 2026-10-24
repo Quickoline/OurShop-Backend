@@ -64,12 +64,14 @@ const getAllProductsService = async (queryParams = {}) => {
         isCombo,
         isActive,
         search,
+        vendor,
     } = queryParams;
 
     const filter = {};
     if (category) filter.category = category;
     if (subcategory) filter.subcategory = subcategory;
     if (brand) filter.brand = brand;
+    if (vendor) filter.vendor = vendor;
     if (isBestSeller !== undefined) filter.isBestSeller = isBestSeller === 'true';
     if (isNewlyLaunched !== undefined) filter.isNewlyLaunched = isNewlyLaunched === 'true';
     if (isMegaOffer !== undefined) filter.isMegaOffer = isMegaOffer === 'true';
@@ -93,6 +95,7 @@ const getAllProductsService = async (queryParams = {}) => {
     .populate("category", "name slug")
     .populate("subcategory", "name slug")
     .populate("brand", "name slug logo")
+    .populate("vendor", "name email")
     .sort(sort)
     .skip(skip)
     .limit(Number(limit));
@@ -115,7 +118,8 @@ const getProductByIdService = async (id) => {
     return await Product.findById(id)
         .populate("category", "name slug")
         .populate("subcategory", "name slug")
-        .populate("brand", "name slug logo");   
+        .populate("brand", "name slug logo")
+        .populate("vendor", "name email");   
 };
 
 const getProductBySlugService = async (slugOrId) => {
@@ -125,7 +129,8 @@ const getProductBySlugService = async (slugOrId) => {
     const bySlug = await Product.findOne({ slug: lookup.toLowerCase() })
         .populate("category", "name slug")
         .populate("subcategory", "name slug")
-        .populate("brand", "name slug logo");
+        .populate("brand", "name slug logo")
+        .populate("vendor", "name email");
 
     if (bySlug) return bySlug;
 
@@ -133,7 +138,8 @@ const getProductBySlugService = async (slugOrId) => {
         return await Product.findById(lookup)
             .populate("category", "name slug")
             .populate("subcategory", "name slug")
-            .populate("brand", "name slug logo");
+            .populate("brand", "name slug logo")
+            .populate("vendor", "name email");
     }
 
     return null;

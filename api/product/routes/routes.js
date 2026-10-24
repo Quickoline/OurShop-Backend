@@ -14,6 +14,7 @@ const {
     searchProducts,
 } = require("../controller/controller");
 const { uploadProductMedia } = require("../middleware/uploadMedia");
+const { authenticate, authorizeRoles } = require("../../../auth/auth");
 
 const router = express.Router();
 
@@ -26,10 +27,10 @@ router.get("/slug/:slug", getProductBySlug);
 router.get("/:id/related", getRelatedProducts);
 
 
-router.post("/", uploadProductMedia, createProduct);
+router.post("/", authenticate, authorizeRoles("admin", "vendor"), uploadProductMedia, createProduct);
 router.get("/", getAllProducts);
 router.get("/:id", getProductById);
-router.put("/:id", uploadProductMedia, updateProduct);
-router.delete("/:id", deleteProduct);
+router.put("/:id", authenticate, authorizeRoles("admin", "vendor"), uploadProductMedia, updateProduct);
+router.delete("/:id", authenticate, authorizeRoles("admin", "vendor"), deleteProduct);
 
 module.exports = router;

@@ -15,6 +15,7 @@ const {
   searchServices,
 } = require("../controller/controller");
 const { uploadServiceMedia } = require("../middleware/uploadMedia");
+const { authenticate, authorizeRoles } = require("../../../auth/auth");
 
 const router = express.Router();
 
@@ -27,10 +28,10 @@ router.get("/category/:categoryId", getServicesByCategory);
 router.get("/slug/:slug", getServiceBySlug);
 router.get("/:id/related", getRelatedServices);
 
-router.post("/", uploadServiceMedia, createService);
+router.post("/", authenticate, authorizeRoles("admin", "vendor"), uploadServiceMedia, createService);
 router.get("/", getAllServices);
 router.get("/:id", getServiceById);
-router.put("/:id", uploadServiceMedia, updateService);
-router.delete("/:id", deleteService);
+router.put("/:id", authenticate, authorizeRoles("admin", "vendor"), uploadServiceMedia, updateService);
+router.delete("/:id", authenticate, authorizeRoles("admin", "vendor"), deleteService);
 
 module.exports = router;

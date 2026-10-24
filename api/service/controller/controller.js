@@ -14,6 +14,11 @@ const {
   searchServicesService,
 } = require("../services/services");
 const { uploadBufferToS3 } = require("../../../config/s3");
+const { normalizeJwtSubjectId } = require("../../../auth/auth");
+const jwt = require("jsonwebtoken");
+const User = require("../../user/model/model");
+
+const JWT_SECRET = process.env.JWT_SECRET || "dev-jwt-secret";
 
 const parseMaybeJsonArray = (value) => {
   if (value === undefined || value === null || value === "") return [];
@@ -110,6 +115,13 @@ const createService = async (req, res) => {
       )
     );
 
+    // Auto-assign vendor for vendors, allow setting for superadmins
+    if (req.user?.role === "vendor") {
+      payload.vendor = req.user.id;
+    } else if (req.user?.role === "admin" && req.body.vendor) {
+      payload.vendor = req.body.vendor;
+    }
+
     const service = await createServiceService(payload);
     res.status(201).json({
       success: true,
@@ -123,7 +135,27 @@ const createService = async (req, res) => {
 
 const getAllServices = async (req, res) => {
   try {
-    const result = await getAllServicesService(req.query);
+    const query = { ...req.query };
+
+    // Handle optional auth checks for vendor listing scoping
+    const authHeader = req.headers.authorization || "";
+    const [, token] = authHeader.split(" ");
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const subjectId = normalizeJwtSubjectId(decoded);
+        if (subjectId) {
+          const user = await User.findById(subjectId);
+          if (user && user.role === "vendor") {
+            query.vendor = String(user._id);
+          }
+        }
+      } catch (e) {
+        // ignore and continue
+      }
+    }
+
+    const result = await getAllServicesService(query);
     res.status(200).json({
       success: true,
       data: result.services,
@@ -170,6 +202,22 @@ const updateService = async (req, res) => {
     const imgCoverFile = req.files?.imgCover?.[0];
     const imageFiles = req.files?.images || [];
 
+    const existingService = await getServiceByIdService(req.params.id);
+    if (!existingService) {
+      return res.status(404).json({
+        success: false,
+        message: "Service not found",
+      });
+    }
+
+    // Vendor ownership check
+    if (req.user?.role === "vendor" && String(existingService.vendor || "") !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. You do not own this service.",
+      });
+    }
+
     if (imgCoverFile) {
       payload.imgCover = await uploadBufferToS3({
         buffer: imgCoverFile.buffer,
@@ -188,6 +236,13 @@ const updateService = async (req, res) => {
           })
         )
       );
+    }
+
+    // Vendors cannot change vendor field
+    if (req.user?.role === "vendor") {
+      delete payload.vendor;
+    } else if (req.user?.role === "admin" && req.body.vendor) {
+      payload.vendor = req.body.vendor;
     }
 
     const service = await updateServiceService(req.params.id, payload);
@@ -209,6 +264,22 @@ const updateService = async (req, res) => {
 
 const deleteService = async (req, res) => {
   try {
+    const existingService = await getServiceByIdService(req.params.id);
+    if (!existingService) {
+      return res.status(404).json({
+        success: false,
+        message: "Service not found",
+      });
+    }
+
+    // Vendor ownership check
+    if (req.user?.role === "vendor" && String(existingService.vendor || "") !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. You do not own this service.",
+      });
+    }
+
     const service = await deleteServiceService(req.params.id);
     if (!service) {
       return res.status(404).json({

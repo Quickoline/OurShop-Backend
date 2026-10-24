@@ -30,8 +30,13 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["admin", "user"],
+      enum: ["admin", "vendor", "delivery", "user"],
       default: "user",
+    },
+
+    isOrderAdmin: {
+      type: Boolean,
+      default: false,
     },
 
     isActive: {
@@ -63,6 +68,14 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    /** Depth from head (0=head). Capped at 6; depth 7+ stored as 6. */
+    orgLevel: {
+      type: Number,
+      min: 0,
+      max: 6,
+      default: null,
+    },
+
     walletBalance: {
       type: Number,
       default: 0,
@@ -91,9 +104,10 @@ const userSchema = new mongoose.Schema(
 
 const { generateReferralCode } = require("../../mlm/code");
 
-// Referral code on new users
+// Referral code on new users (level 6 leaf buyers cannot refer — no code)
 userSchema.pre("save", async function () {
   if (this.isNew && !this.referralCode && this.role === "user") {
+    if (this.orgLevel === 6) return;
     let code;
     let exists = true;
     const User = mongoose.model("User");

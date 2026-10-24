@@ -2,6 +2,7 @@ const {
     getUserCartService,
     addToCartService,
     removeFromCartService,
+    updateCartQtyService,
     applyCouponToCartService,
     removeCouponFromCartService,
     clearCartService,
@@ -38,6 +39,19 @@ const removeFromCart = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "Item removed",
+            data: cart,
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const updateCartQty = async (req, res) => {
+    try {
+        const cart = await updateCartQtyService(req.user.id, req.body);
+        res.status(200).json({
+            success: true,
+            message: "Cart quantity updated successfully",
             data: cart,
         });
     } catch (error) {
@@ -94,6 +108,7 @@ module.exports = {
     getCart,
     addToCart,
     removeFromCart,
+    updateCartQty,
     applyCoupon,
     removeCoupon,
     clearCart,

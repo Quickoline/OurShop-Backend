@@ -26,7 +26,22 @@ const walletTransactionSchema = new mongoose.Schema(
     },
     mlmLevel: {
       type: String,
-      enum: ["head", "level1", "level2", "level3", "level4", "level5", "level6", null],
+      enum: [
+        "head",
+        "level1",
+        "level2",
+        "level3",
+        "level4",
+        "level5",
+        "level6",
+        "upline1",
+        "upline2",
+        "upline3",
+        "upline4",
+        "upline5",
+        "upline6",
+        null,
+      ],
       default: null,
     },
     order: {
@@ -45,6 +60,9 @@ const walletTransactionSchema = new mongoose.Schema(
       profitBase: Number,
       rate: Number,
       quantity: Number,
+      reversedTxn: mongoose.Schema.Types.ObjectId,
+      reason: String,
+      superseded: { type: Boolean, default: false },
     },
   },
   { timestamps: true }

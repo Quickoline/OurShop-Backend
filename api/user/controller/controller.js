@@ -32,7 +32,13 @@ const createUser = async (req, res) => {
                 message: "Email already exists",
             });
         }
-        if (error.message === "Invalid referral code") {
+        if (
+            error.message === "Invalid referral code" ||
+            error.message === "Referral code is required" ||
+            error.message.includes("cannot refer") ||
+            error.message.includes("maximum depth") ||
+            error.message.includes("spine member")
+        ) {
             return res.status(400).json({
                 success: false,
                 message: error.message,

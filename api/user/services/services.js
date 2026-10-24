@@ -1,27 +1,35 @@
 const User = require("../model/model");
 const { resolveSponsorByCode } = require("../../mlm/referral");
+const { validateSponsorForSignup } = require("../../mlm/orgLevel");
+const { resolveAdminListLimit } = require("../../../config/adminList");
 
 const createUserService = async (data) => {
     const payload = { ...data };
+    const role = payload.role || "user";
 
-    if (payload.referralCode && payload.role !== "admin") {
-        const sponsor = await resolveSponsorByCode(payload.referralCode);
-        if (!sponsor) {
-            throw new Error("Invalid referral code");
-        }
-        if (String(sponsor._id) === String(payload._id)) {
-            throw new Error("Cannot use your own referral code");
-        }
-        payload.sponsor = sponsor._id;
-        delete payload.referralCode;
-    } else if (payload.referralCode) {
-        delete payload.referralCode;
-    }
-
-    if (payload.role !== "admin" && !payload.sponsor && payload.sponsorId) {
+    if (payload.sponsorId && !payload.sponsor) {
         payload.sponsor = payload.sponsorId;
         delete payload.sponsorId;
     }
+
+    if (role !== "admin" && role !== "vendor" && role !== "delivery") {
+        if (!payload.sponsor) {
+            const code = String(payload.referralCode || "").trim();
+            if (!code) {
+                throw new Error("Referral code is required");
+            }
+            const sponsor = await resolveSponsorByCode(code);
+            if (!sponsor) {
+                throw new Error("Invalid referral code");
+            }
+            payload.sponsor = sponsor._id;
+        }
+
+        const { orgLevel } = await validateSponsorForSignup(payload.sponsor);
+        payload.orgLevel = orgLevel;
+    }
+
+    delete payload.referralCode;
 
     return await User.create(payload);
 };
@@ -29,7 +37,7 @@ const createUserService = async (data) => {
 const getAllUsersService = async (queryParams = {}) => {
     const {
         page = 1,
-        limit = 10,
+        limit = 10000,
         sort = "-createdAt",
         role,
         isActive,
@@ -52,7 +60,8 @@ const getAllUsersService = async (queryParams = {}) => {
         ];
     }
 
-    const skip = (Number(page) - 1) * Number (limit);
+    const skip = (Number(page) - 1) * Number(limit);
+    const pageLimit = resolveAdminListLimit(limit);
 
     const users = await User.find(filter)
     .select("-password -passwordResetToken -passwordResetExpires")
@@ -60,7 +69,7 @@ const getAllUsersService = async (queryParams = {}) => {
     .populate("wishlist", "title slug imgCover price")
     .sort(sort)
     .skip(skip)
-    .limit(Number(limit));
+    .limit(pageLimit);
 
     // Get total count for pagination
     const total = await User.countDocuments (filter);
@@ -69,9 +78,9 @@ const getAllUsersService = async (queryParams = {}) => {
         users,
         pagination: {
             currentPage: Number(page),
-            totalPages: Math.ceil(total / Number(limit)),
+            totalPages: Math.ceil(total / pageLimit),
             totalUsers: total,
-            hasNextPage: Number(page) < Math.ceil(total / Number(limit)),
+            hasNextPage: Number(page) < Math.ceil(total / pageLimit),
             hasPrevPage: Number(page) > 1,
         },
     };

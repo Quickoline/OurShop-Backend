@@ -1,5 +1,6 @@
 const User = require("../user/model/model");
 const { generateReferralCode } = require("./code");
+const { canSponsorNewMember } = require("./orgLevel");
 
 const ensureReferralCode = async (user) => {
   if (user.referralCode) return user.referralCode;
@@ -23,7 +24,11 @@ const resolveSponsorByCode = async (referralCode) => {
     role: "user",
     blocked: false,
     isActive: true,
-  }).select("_id referralCode name");
+  }).select("_id referralCode name orgLevel");
+  if (!sponsor) return null;
+
+  if (!(await canSponsorNewMember(sponsor._id))) return null;
+
   return sponsor;
 };
 

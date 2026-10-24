@@ -71,6 +71,7 @@ const authenticate = async (req, res, next) => {
       role: user.role,
       name: user.name,
       email: user.email,
+      isOrderAdmin: Boolean(user.isOrderAdmin),
     };
 
     next();

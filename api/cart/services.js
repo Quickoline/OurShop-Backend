@@ -202,10 +202,80 @@ const clearCartService = async (userId) => {
   return await Cart.findOneAndDelete({ userId });
 };
 
+const updateCartQtyService = async (userId, payload) => {
+  const {
+    productId,
+    serviceId,
+    itemType = productId ? "product" : serviceId ? "service" : "product",
+    quantity,
+  } = payload;
+
+  const targetQty = Number(quantity);
+  if (isNaN(targetQty) || targetQty <= 0) {
+    throw new Error("Invalid quantity");
+  }
+
+  let cart = await Cart.findOne({ userId });
+  if (!cart) {
+    throw new Error("Cart not found");
+  }
+
+  const refKey = itemType === "service" ? "serviceId" : "productId";
+  const refValue = (serviceId || productId).toString();
+
+  const itemIndex = cart.cartItems.findIndex((item) => {
+    const existingRef =
+      item.itemType === "service"
+        ? resolveCartRefId(item.serviceId)
+        : resolveCartRefId(item.productId);
+    return existingRef === refValue;
+  });
+
+  if (itemIndex === -1) {
+    throw new Error("Item not found in cart");
+  }
+
+  // Stock check
+  if (itemType === "service") {
+    const service = await Service.findById(refValue);
+    const capacity = Number(service?.capacity || 0);
+    if (capacity > 0 && targetQty > capacity) {
+      throw new Error("Service has no available slots for requested quantity");
+    }
+  } else {
+    const product = await Product.findById(refValue);
+    if (targetQty > Number(product?.quantity || 0)) {
+      throw new Error("Product is out of stock for requested quantity");
+    }
+  }
+
+  cart.cartItems[itemIndex].quantity = targetQty;
+  cart.calculateTotals();
+  
+  if (cart.couponCode) {
+    try {
+      const couponValidation = await validateCouponService(
+        cart.couponCode,
+        userId,
+        cart.totalPrice,
+        false
+      );
+      cart.couponDiscount = couponValidation.valid ? couponValidation.discount : 0;
+    } catch {
+      cart.couponDiscount = 0;
+    }
+    cart.calculateTotals();
+  }
+
+  await cart.save();
+  return cart;
+};
+
 module.exports = {
   getUserCartService,
   addToCartService,
   removeFromCartService,
+  updateCartQtyService,
   applyCouponToCartService,
   removeCouponFromCartService,
   clearCartService,

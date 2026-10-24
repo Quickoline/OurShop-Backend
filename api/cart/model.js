@@ -17,7 +17,7 @@ const cartItemSchema = new mongoose.Schema({
   quantity: {
     type: Number,
     default: 1,
-    min: 1,
+    min: 0.001,
   },
   price: Number,
   priceAfterDiscount: Number,
@@ -57,10 +57,10 @@ const cartSchema = new mongoose.Schema(
 cartSchema.pre(["find", "findOne"], function () {
   this.populate(
     "cartItems.productId",
-    "title imgCover price priceAfterDiscount quantity slug"
+    "title imgCover price priceAfterDiscount quantity slug unit"
   ).populate(
     "cartItems.serviceId",
-    "title imgCover price priceAfterDiscount capacity slug duration"
+    "title imgCover price priceAfterDiscount capacity slug duration unit"
   );
 });
 

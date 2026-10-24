@@ -6,13 +6,18 @@ const WalletTransaction = require("../wallet/model");
 const {
   ADMIN_SHARE_OF_PROFIT,
   MLM_SHARE_OF_PROFIT,
-  MLM_LEVEL_RATES,
+  MLM_UPLINE_SLOTS,
 } = require("./constants");
 const { getAncestorChain, findDefaultAdminRecipient } = require("./referral");
+const { MAX_COMMISSION_HOPS } = require("./constants");
 
 const UPDATE_OPTS = { returnDocument: "after" };
 
-const roundMoney = (n) => Math.round(Number(n) * 100) / 100;
+const roundMoney = (n) => {
+  const value = Number(n);
+  if (!Number.isFinite(value)) return 0;
+  return Math.round(value * 100) / 100;
+};
 
 const creditWallet = async (userId, amount, payload) => {
   const amt = roundMoney(amount);
@@ -44,10 +49,12 @@ const payoutExists = async (orderId, userId, payload) => {
     user: userId,
     type: payload.type,
     mlmLevel: payload.mlmLevel ?? null,
+    "meta.superseded": { $ne: true },
   };
   if (meta.productId) query["meta.productId"] = meta.productId;
   if (meta.serviceId) query["meta.serviceId"] = meta.serviceId;
-  return WalletTransaction.exists(query);
+  const rows = await WalletTransaction.find(query).select("_id meta");
+  return rows.some((row) => !row.meta?.superseded);
 };
 
 const creditWalletOnce = async (userId, amount, payload) => {
@@ -109,10 +116,8 @@ const buildLineMeta = (line, lineProfit, qty, rate) => ({
 });
 
 /**
- * MLM pool (50% of line profit) on each delivered order — upline only:
- * - head (10%): buyer (Rahul when Rahul orders)
- * - level1–6: sponsor chain upward only; missing slots → company wallet
- * Downline (buyer's referrals) never earn on the buyer's order.
+ * Any member's order: up to 6 upline hops earn 30/20/20/10/10/10.
+ * Hop 7+ upline exits (no payout). Depth 7+ from head is org level 6.
  */
 const distributeOrderCommissions = async (orderId) => {
   const order = await Order.findById(orderId)
@@ -127,21 +132,19 @@ const distributeOrderCommissions = async (orderId) => {
     return { skipped: true, reason: "no_commissionable_items" };
   }
 
-  const buyer = await User.findById(order.user).select("_id name email referralCode");
+  const buyer = await User.findById(order.user).select("_id name email referralCode orgLevel");
   if (!buyer) throw new Error("Buyer not found");
 
-  const upline = await getAncestorChain(buyer._id, 6);
+  const upline = await getAncestorChain(buyer._id, MAX_COMMISSION_HOPS);
   const adminUser = await findDefaultAdminRecipient();
 
-  const levelRecipients = {
-    head: buyer,
-    level1: upline[0] || null,
-    level2: upline[1] || null,
-    level3: upline[2] || null,
-    level4: upline[3] || null,
-    level5: upline[4] || null,
-    level6: upline[5] || null,
-  };
+  const slotRecipients = MLM_UPLINE_SLOTS.map(({ slot, hop, label, rate }) => ({
+    slot,
+    hop,
+    label,
+    rate,
+    recipient: upline[hop - 1] || null,
+  }));
 
   let totalProfit = 0;
   let totalAdminShare = 0;
@@ -176,28 +179,27 @@ const distributeOrderCommissions = async (orderId) => {
       if (!adminResult.skipped) creditsApplied += 1;
     }
 
-    for (const [levelKey, rate] of Object.entries(MLM_LEVEL_RATES)) {
+    for (const { slot, rate, label, recipient } of slotRecipients) {
       const share = roundMoney(mlmPool * rate);
       if (share <= 0) continue;
 
-      const recipient = levelRecipients[levelKey];
       const targetId = recipient?._id;
 
       if (targetId) {
         const result = await creditWalletOnce(targetId, share, {
           type: "mlm_commission",
-          mlmLevel: levelKey,
+          mlmLevel: slot,
           orderId: order._id,
-          description: `MLM ${levelKey} (${levelKey === "head" ? "buyer" : "upline"}) — ${typeLabel}: ${line.title}`,
+          description: `MLM ${label} — ${typeLabel}: ${line.title}`,
           meta: buildLineMeta(line, lineProfit, qty, rate),
         });
         if (!result.skipped) creditsApplied += 1;
       } else if (adminRecipient) {
         const result = await creditWalletOnce(adminRecipient, share, {
           type: "unallocated",
-          mlmLevel: levelKey,
+          mlmLevel: slot,
           orderId: order._id,
-          description: `Company wallet — unallocated ${levelKey} (no upline) — ${typeLabel}: ${line.title}`,
+          description: `Company wallet — unallocated ${label} — ${typeLabel}: ${line.title}`,
           meta: buildLineMeta(line, lineProfit, qty, rate),
         });
         if (!result.skipped) {
@@ -235,9 +237,22 @@ const distributeOrderCommissions = async (orderId) => {
     totalProfit: roundMoney(totalProfit),
     adminShare: roundMoney(totalAdminShare),
     mlmShare: roundMoney(totalMlmShare),
-    buyer: { id: buyer._id, name: buyer.name },
+    buyer: { id: buyer._id, name: buyer.name, orgLevel: buyer.orgLevel },
     uplineCount: upline.length,
+    effectiveHead: upline[MAX_COMMISSION_HOPS - 1]
+      ? {
+          id: upline[MAX_COMMISSION_HOPS - 1]._id,
+          name: upline[MAX_COMMISSION_HOPS - 1].name,
+          hop: MAX_COMMISSION_HOPS,
+        }
+      : null,
+    exitedUplineCount: Math.max(0, (await getFullUplineCount(buyer._id)) - MAX_COMMISSION_HOPS),
   };
+};
+
+const getFullUplineCount = async (buyerId) => {
+  const full = await getAncestorChain(buyerId, 64);
+  return full.length;
 };
 
 module.exports = {

@@ -1,10 +1,17 @@
 const services = require("./services");
 const { distributeOrderCommissions } = require("../mlm/distribute");
-const { MLM_LEVEL_RATES, ADMIN_SHARE_OF_PROFIT, MLM_SHARE_OF_PROFIT } = require("../mlm/constants");
+const {
+  MLM_UPLINE_SLOTS,
+  ADMIN_SHARE_OF_PROFIT,
+  MLM_SHARE_OF_PROFIT,
+  MAX_COMMISSION_HOPS,
+} = require("../mlm/constants");
 
 const getMyWallet = async (req, res) => {
   try {
-    const data = await services.getWalletSummary(req.user.id);
+    const data = req.user?.role === "delivery"
+      ? await services.getDeliveryWalletSummary(req.user.id)
+      : await services.getWalletSummary(req.user.id);
     if (!data) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
@@ -16,7 +23,9 @@ const getMyWallet = async (req, res) => {
 
 const getMyTransactions = async (req, res) => {
   try {
-    const data = await services.getTransactions(req.user.id, req.query);
+    const data = req.user?.role === "delivery"
+      ? await services.getDeliveryTransactions(req.user.id, req.query)
+      : await services.getTransactions(req.user.id, req.query);
     res.status(200).json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -38,12 +47,21 @@ const getMlmConfig = async (req, res) => {
     data: {
       adminSharePercent: ADMIN_SHARE_OF_PROFIT * 100,
       mlmSharePercent: MLM_SHARE_OF_PROFIT * 100,
-      headIsBuyer: true,
+      maxCommissionHops: MAX_COMMISSION_HOPS,
+      depth7ActsAsLevel6: true,
+      slidingWindow: true,
+      effectiveHeadDescription:
+        "On each order, only the nearest 6 uplines are paid; hop-6 acts as effective head for that order. Org head above hop-6 exits (no payout).",
+      headIsBuyer: false,
       levelsAreUplineOnly: true,
-      unallocatedLevelsToCompany: true,
-      levelRates: Object.fromEntries(
-        Object.entries(MLM_LEVEL_RATES).map(([k, v]) => [k, v * 100])
-      ),
+      oneToOneSponsorChain: true,
+      unallocatedHopsToCompany: true,
+      uplineSlots: MLM_UPLINE_SLOTS.map(({ slot, rate, hop, label }) => ({
+        slot,
+        hop,
+        label,
+        percentOfMlmPool: rate * 100,
+      })),
     },
   });
 };

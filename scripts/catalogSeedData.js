@@ -3,15 +3,15 @@ const img = (id, w = 600) =>
   `https://images.unsplash.com/photo-${id}?w=${w}&q=80`;
 
 const categories = [
-  { name: "Electronics", slug: "electronics", description: "Phones, audio, and smart gadgets", image: img("15261703733318-803941a6bf21"), showInNav: true, displayOrder: 1 },
-  { name: "Fashion", slug: "fashion", description: "Clothing and accessories", image: img("1445205170230-053b83016050"), showInNav: true, displayOrder: 2 },
-  { name: "Home & Living", slug: "home", description: "Decor, kitchen, and furniture", image: img("1586023492125-27b2c045efd7"), showInNav: true, displayOrder: 3 },
-  { name: "Beauty", slug: "beauty", description: "Skincare, makeup, and care", image: img("1596462502278-27bfd4033488"), showInNav: true, displayOrder: 4 },
-  { name: "Sports", slug: "sports", description: "Fitness and outdoor gear", image: img("1517836357463-29668312a413"), showInNav: true, displayOrder: 5 },
-  { name: "Books", slug: "books", description: "Reads for every interest", image: img("1495444378710-a822be758398"), showInNav: false, displayOrder: 6 },
-  { name: "Home Services", slug: "home-services", description: "Cleaning, repairs, and installation", image: img("1581578730548-2f4f54f84e8f"), showInNav: true, displayOrder: 7 },
-  { name: "Professional", slug: "professional", description: "Consulting, design, and business services", image: img("1600880292203-757bb62b4daf"), showInNav: true, displayOrder: 8 },
-  { name: "Wellness", slug: "wellness-services", description: "Fitness, spa, and personal care", image: img("1544367567-0f2fcb009e23"), showInNav: false, displayOrder: 9 },
+  { name: "Electronics", slug: "electronics", showInNav: true },
+  { name: "Fashion", slug: "fashion", showInNav: true },
+  { name: "Home & Living", slug: "home", showInNav: true },
+  { name: "Beauty", slug: "beauty", showInNav: true },
+  { name: "Sports", slug: "sports", showInNav: true },
+  { name: "Books", slug: "books", showInNav: false },
+  { name: "Home Services", slug: "home-services", showInNav: true },
+  { name: "Professional", slug: "professional", showInNav: true },
+  { name: "Wellness", slug: "wellness-services", showInNav: false },
 ];
 
 const brands = [

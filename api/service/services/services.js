@@ -65,12 +65,14 @@ const getAllServicesService = async (queryParams = {}) => {
     isCombo,
     isActive,
     search,
+    vendor,
   } = queryParams;
 
   const filter = {};
   if (category) filter.category = category;
   if (subcategory) filter.subcategory = subcategory;
   if (brand) filter.brand = brand;
+  if (vendor) filter.vendor = vendor;
   if (isBestSeller !== undefined) filter.isBestSeller = isBestSeller === "true";
   if (isFeatured !== undefined) filter.isFeatured = isFeatured === "true";
   if (isNewlyLaunched !== undefined) filter.isNewlyLaunched = isNewlyLaunched === "true";
@@ -94,6 +96,7 @@ const getAllServicesService = async (queryParams = {}) => {
     .populate("category", "name slug")
     .populate("subcategory", "name slug")
     .populate("brand", "name slug logo")
+    .populate("vendor", "name email")
     .sort(sort)
     .skip(skip)
     .limit(Number(limit));
@@ -116,7 +119,8 @@ const getServiceByIdService = async (id) => {
   return await Service.findById(id)
     .populate("category", "name slug")
     .populate("subcategory", "name slug")
-    .populate("brand", "name slug logo");
+    .populate("brand", "name slug logo")
+    .populate("vendor", "name email");
 };
 
 const getServiceBySlugService = async (slugOrId) => {
@@ -126,7 +130,8 @@ const getServiceBySlugService = async (slugOrId) => {
   const bySlug = await Service.findOne({ slug: lookup.toLowerCase() })
     .populate("category", "name slug")
     .populate("subcategory", "name slug")
-    .populate("brand", "name slug logo");
+    .populate("brand", "name slug logo")
+    .populate("vendor", "name email");
 
   if (bySlug) return bySlug;
 
@@ -134,7 +139,8 @@ const getServiceBySlugService = async (slugOrId) => {
     return await Service.findById(lookup)
       .populate("category", "name slug")
       .populate("subcategory", "name slug")
-      .populate("brand", "name slug logo");
+      .populate("brand", "name slug logo")
+      .populate("vendor", "name email");
   }
 
   return null;

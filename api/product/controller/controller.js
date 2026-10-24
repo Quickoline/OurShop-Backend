@@ -13,6 +13,11 @@ const {
     searchProductsService
 } = require("../services/services");
 const { uploadBufferToS3 } = require("../../../config/s3");
+const { normalizeJwtSubjectId } = require("../../../auth/auth");
+const jwt = require("jsonwebtoken");
+const User = require("../../user/model/model");
+
+const JWT_SECRET = process.env.JWT_SECRET || "dev-jwt-secret";
 
 const parseMaybeJsonArray = (value) => {
     if (value === undefined || value === null || value === "") return [];
@@ -97,6 +102,13 @@ const createProduct = async (req, res) => {
             )
         );
 
+        // Auto-assign vendor for vendors, allow setting for superadmins
+        if (req.user?.role === "vendor") {
+            payload.vendor = req.user.id;
+        } else if (req.user?.role === "admin" && req.body.vendor) {
+            payload.vendor = req.body.vendor;
+        }
+
         const product = await createProductService(payload);
         res.status(201).json({
             success: true,
@@ -110,7 +122,27 @@ const createProduct = async (req, res) => {
 
 const getAllProducts = async (req, res) => {
     try{
-        const result = await getAllProductsService(req.query);
+        const query = { ...req.query };
+
+        // Handle optional auth checks for vendor listing scoping
+        const authHeader = req.headers.authorization || "";
+        const [, token] = authHeader.split(" ");
+        if (token) {
+            try {
+                const decoded = jwt.verify(token, JWT_SECRET);
+                const subjectId = normalizeJwtSubjectId(decoded);
+                if (subjectId) {
+                    const user = await User.findById(subjectId);
+                    if (user && user.role === "vendor") {
+                        query.vendor = String(user._id);
+                    }
+                }
+            } catch (e) {
+                // ignore and continue (can be a public listing request)
+            }
+        }
+
+        const result = await getAllProductsService(query);
         res.status(200).json({
             success: true,
             data: result.products,
@@ -157,6 +189,22 @@ const updateProduct = async (req, res) => {
         const imgCoverFile = req.files?.imgCover?.[0];
         const imageFiles = req.files?.images || [];
 
+        const existingProduct = await getProductByIdService(req.params.id);
+        if (!existingProduct) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found",
+            });
+        }
+
+        // Vendor ownership check
+        if (req.user?.role === "vendor" && String(existingProduct.vendor || "") !== req.user.id) {
+            return res.status(403).json({
+                success: false,
+                message: "Access denied. You do not own this product.",
+            });
+        }
+
         if (imgCoverFile) {
             payload.imgCover = await uploadBufferToS3({
                 buffer: imgCoverFile.buffer,
@@ -175,6 +223,13 @@ const updateProduct = async (req, res) => {
                     })
                 )
             );
+        }
+
+        // Vendors cannot change vendor of products
+        if (req.user?.role === "vendor") {
+            delete payload.vendor;
+        } else if (req.user?.role === "admin" && req.body.vendor) {
+            payload.vendor = req.body.vendor;
         }
 
         const product = await updateProductService(req.params.id, payload);
@@ -196,6 +251,22 @@ const updateProduct = async (req, res) => {
 
 const deleteProduct = async (req, res) => {
     try {
+        const existingProduct = await getProductByIdService(req.params.id);
+        if (!existingProduct) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found",
+            });
+        }
+
+        // Vendor ownership check
+        if (req.user?.role === "vendor" && String(existingProduct.vendor || "") !== req.user.id) {
+            return res.status(403).json({
+                success: false,
+                message: "Access denied. You do not own this product.",
+            });
+        }
+
         const product = await deleteProductService(req.params.id);
         if (!product) {
             return res.status(404).json({
