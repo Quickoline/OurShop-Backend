@@ -22,7 +22,20 @@ const PORT = process.env.PORT || 5000;
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL?.split(",") || "*",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, native apps)
+      if (!origin) return callback(null, true);
+      const configuredOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(",") : [];
+      if (
+        configuredOrigins.includes(origin) ||
+        origin.includes("localhost") ||
+        origin.includes("127.0.0.1") ||
+        origin.includes("quickoshop.com")
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );

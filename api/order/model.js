@@ -74,11 +74,11 @@ const orderSchema = new mongoose.Schema(
     // Address
     shippingAddress: {
       fullName: String,
-      phone: Number,
+      phone: mongoose.Schema.Types.Mixed,
       addressLine: String,
       city: String,
       state: String,
-      pincode: Number,
+      pincode: mongoose.Schema.Types.Mixed,
       country: {
         type: String,
         require: true,
@@ -111,7 +111,7 @@ const orderSchema = new mongoose.Schema(
     // Payment
     paymentMethod: {
       type: String,
-      enum: ["CARD", "UPI", "NETBANKING", "RAZORPAY"],
+      enum: ["CARD", "UPI", "NETBANKING", "RAZORPAY", "QR_CODE", "COD", "WALLET"],
       required: true,
     },
     paymentResult: {

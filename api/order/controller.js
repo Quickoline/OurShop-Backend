@@ -40,6 +40,11 @@ const create = async (req, res) => {
     // Auto invoice number generate
     body.invoiceNumber = `INV-${Date.now()}`;
 
+    // Normalize paymentMethod (allow UPI for QR_CODE, uppercase)
+    if (body.paymentMethod) {
+      body.paymentMethod = String(body.paymentMethod).toUpperCase();
+    }
+
     const data = await services.create(body);
 
     res.status(201).json({
@@ -50,6 +55,7 @@ const create = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       success: false,
+      message: err.message || "Error creating order",
       error: "Error creating order",
       details: err.message,
     });
