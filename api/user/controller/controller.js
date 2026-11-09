@@ -327,14 +327,30 @@ const toggleNewsletter = async (req, res) => {
 const updateFcmToken = async (req, res) => {
     try {
         const userId = req.user?.id || req.user?._id;
-        const { fcmToken } = req.body;
-        if (!fcmToken || typeof fcmToken !== "string") {
-            return res.status(400).json({ success: false, message: "Valid fcmToken is required" });
+        const body = req.body || {};
+        const fcmToken =
+            body.fcmToken ||
+            body.token ||
+            body.fcm_token ||
+            body.deviceToken ||
+            body.device_token ||
+            body.registration_token ||
+            req.query.token ||
+            req.query.fcmToken;
+
+        if (!fcmToken || typeof fcmToken !== "string" || fcmToken.trim().length < 10) {
+            return res.status(400).json({
+                success: false,
+                message: "Valid fcmToken is required (acceptable keys: fcmToken, token, fcm_token, deviceToken)",
+            });
         }
+
         const { registerFcmToken } = require("../../../services/notificationService");
-        await registerFcmToken(userId, fcmToken);
+        await registerFcmToken(userId, fcmToken.trim());
+        console.log(`[FCM] Token registered for user ${userId} (${req.user?.email || "unknown"}, role: ${req.user?.role}): ${fcmToken.slice(0, 15)}...`);
         res.status(200).json({ success: true, message: "FCM token registered successfully" });
     } catch (error) {
+        console.error("[FCM] updateFcmToken error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -342,14 +358,98 @@ const updateFcmToken = async (req, res) => {
 const removeFcmToken = async (req, res) => {
     try {
         const userId = req.user?.id || req.user?._id;
-        const { fcmToken } = req.body;
+        const body = req.body || {};
+        const fcmToken =
+            body.fcmToken ||
+            body.token ||
+            body.fcm_token ||
+            body.deviceToken ||
+            body.device_token ||
+            body.registration_token ||
+            req.query.token ||
+            req.query.fcmToken;
+
         if (!fcmToken || typeof fcmToken !== "string") {
             return res.status(400).json({ success: false, message: "Valid fcmToken is required" });
         }
         const { unregisterFcmToken } = require("../../../services/notificationService");
-        await unregisterFcmToken(userId, fcmToken);
+        await unregisterFcmToken(userId, fcmToken.trim());
+        console.log(`[FCM] Token removed for user ${userId} (${req.user?.email || "unknown"})`);
         res.status(200).json({ success: true, message: "FCM token removed successfully" });
     } catch (error) {
+        console.error("[FCM] removeFcmToken error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const getFcmStatus = async (req, res) => {
+    try {
+        const userId = req.user?.id || req.user?._id;
+        const User = mongoose.model("User");
+        const currentUser = await User.findById(userId).select("email role fcmTokens");
+        const allUsersWithTokens = await User.find({ "fcmTokens.0": { $exists: true } }).select("email role fcmTokens");
+        const { initFirebase } = require("../../../services/notificationService");
+        
+        res.status(200).json({
+            success: true,
+            currentUser: {
+                id: currentUser?._id,
+                email: currentUser?.email,
+                role: currentUser?.role,
+                tokensCount: currentUser?.fcmTokens?.length || 0,
+                tokens: currentUser?.fcmTokens || [],
+            },
+            totalUsersWithTokens: allUsersWithTokens.length,
+            usersSummary: allUsersWithTokens.map((u) => ({
+                email: u.email,
+                role: u.role,
+                tokensCount: u.fcmTokens?.length || 0,
+            })),
+            firebaseReady: !!initFirebase(),
+        });
+    } catch (error) {
+        console.error("[FCM] getFcmStatus error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const testPushNotification = async (req, res) => {
+    try {
+        const userId = req.user?.id || req.user?._id;
+        const User = mongoose.model("User");
+        const user = await User.findById(userId).select("fcmTokens email role");
+        if (!user?.fcmTokens?.length) {
+            return res.status(400).json({
+                success: false,
+                message: "No FCM tokens registered for your account. Please enable notifications in app or call POST /api/user/fcm-token.",
+            });
+        }
+        const { initFirebase, sendMulticast } = require("../../../services/notificationService");
+        const app = initFirebase();
+        if (!app) {
+            return res.status(500).json({ success: false, message: "Firebase is not initialized on server." });
+        }
+        const result = await sendMulticast(
+          app,
+          user.fcmTokens,
+          {
+            title: "Test Order Notification 🛒",
+            body: `Hello ${user.email}! This is a live top-bar alert test from QuickoShop.`,
+          },
+          {
+            type: "TEST_ORDER",
+            orderId: "test-" + Date.now(),
+            totalPrice: "999",
+            customerName: "QuickoShop Test",
+          }
+        );
+        res.status(200).json({
+          success: true,
+          message: `Test notification sent to ${user.fcmTokens.length} device(s)`,
+          result,
+        });
+    } catch (error) {
+        console.error("[FCM] testPushNotification error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -372,4 +472,6 @@ module.exports = {
     toggleNewsletter,
     updateFcmToken,
     removeFcmToken,
+    getFcmStatus,
+    testPushNotification,
 };

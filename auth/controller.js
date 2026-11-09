@@ -61,6 +61,29 @@ const login = async (req, res, requiredRole = null) => {
 
     const token = signToken(user);
 
+    // Auto-register FCM device token if supplied in login body
+    const incomingFcmToken =
+      req.body.fcmToken ||
+      req.body.fcm_token ||
+      req.body.deviceToken ||
+      req.body.device_token ||
+      req.body.registration_token;
+
+    if (
+      incomingFcmToken &&
+      typeof incomingFcmToken === "string" &&
+      incomingFcmToken.trim().length > 10 &&
+      incomingFcmToken !== token
+    ) {
+      try {
+        const { registerFcmToken } = require("../services/notificationService");
+        await registerFcmToken(user._id, incomingFcmToken.trim());
+        console.log(`[FCM] Auto-registered token on login for ${user.email}`);
+      } catch (fcmErr) {
+        console.warn("[FCM] Failed auto-registering token on login:", fcmErr.message);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       message: "Login successful.",
@@ -93,6 +116,26 @@ const getCurrentUser = async (req, res) => {
         success: false,
         message: "User not found.",
       });
+    }
+
+    // Auto-register FCM device token if supplied in request header or query
+    const incomingFcmToken =
+      req.headers["x-fcm-token"] ||
+      req.headers["fcm-token"] ||
+      req.query.fcmToken ||
+      req.query.deviceToken;
+
+    if (
+      incomingFcmToken &&
+      typeof incomingFcmToken === "string" &&
+      incomingFcmToken.trim().length > 10
+    ) {
+      try {
+        const { registerFcmToken } = require("../services/notificationService");
+        await registerFcmToken(user._id, incomingFcmToken.trim());
+      } catch (fcmErr) {
+        // silent
+      }
     }
 
     return res.status(200).json({

@@ -17,6 +17,8 @@ const {
     toggleNewsletter,
     updateFcmToken,
     removeFcmToken,
+    getFcmStatus,
+    testPushNotification,
 } = require("../controller/controller");
 const {
     authenticate,
@@ -26,8 +28,18 @@ const {
 
 const router = express.Router();
 
+router.get("/fcm-status", authenticate, getFcmStatus);
+router.post("/test-notification", authenticate, testPushNotification);
 router.post("/fcm-token", authenticate, updateFcmToken);
+router.put("/fcm-token", authenticate, updateFcmToken);
 router.delete("/fcm-token", authenticate, removeFcmToken);
+
+router.post("/:id/fcm-token", authenticate, allowSelfOrAdmin("id"), updateFcmToken);
+router.put("/:id/fcm-token", authenticate, allowSelfOrAdmin("id"), updateFcmToken);
+router.delete("/:id/fcm-token", authenticate, allowSelfOrAdmin("id"), removeFcmToken);
+
+router.post("/device-token", authenticate, updateFcmToken);
+router.put("/device-token", authenticate, updateFcmToken);
 
 router.get("/email/:email", authenticate, authorizeRoles("admin"), getUserByEmail);
 

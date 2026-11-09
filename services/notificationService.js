@@ -107,18 +107,41 @@ const sendMulticast = async (app, tokens, notification, data) => {
   if (!cleanTokens.length) return { successCount: 0, failureCount: 0 };
 
   const message = {
-    notification,
+    notification: {
+      title: notification.title,
+      body: notification.body,
+    },
     data: {
       ...data,
+      title: String(notification.title || ""),
+      body: String(notification.body || ""),
       click_action: "FLUTTER_NOTIFICATION_CLICK",
     },
     android: {
       priority: "high",
       notification: {
         channelId: "admin_orders_channel",
+        title: notification.title,
+        body: notification.body,
         sound: "default",
-        priority: "high",
+        priority: "max",
+        visibility: "public",
+        defaultSound: true,
+        defaultVibrateTimings: true,
         clickAction: "FLUTTER_NOTIFICATION_CLICK",
+      },
+    },
+    apns: {
+      payload: {
+        aps: {
+          alert: {
+            title: notification.title,
+            body: notification.body,
+          },
+          sound: "default",
+          badge: 1,
+          contentAvailable: true,
+        },
       },
     },
     tokens: cleanTokens,
@@ -126,6 +149,9 @@ const sendMulticast = async (app, tokens, notification, data) => {
 
   try {
     const response = await admin.messaging().sendEachForMulticast(message);
+    console.log(
+      `[FCM] Multicast sent to ${cleanTokens.length} token(s). Success: ${response.successCount}, Failure: ${response.failureCount}`
+    );
 
     // Automatically purge invalid/expired tokens from DB
     if (response.failureCount > 0) {
@@ -133,6 +159,7 @@ const sendMulticast = async (app, tokens, notification, data) => {
       response.responses.forEach((resp, idx) => {
         if (!resp.success) {
           const errorCode = resp.error?.code;
+          console.warn(`[FCM] Delivery failed for token ${cleanTokens[idx].slice(0, 15)}... Error: ${errorCode || resp.error?.message}`);
           if (
             errorCode === "messaging/registration-token-not-registered" ||
             errorCode === "messaging/invalid-registration-token"
@@ -148,7 +175,7 @@ const sendMulticast = async (app, tokens, notification, data) => {
           { fcmTokens: { $in: tokensToRemove } },
           { $pull: { fcmTokens: { $in: tokensToRemove } } }
         );
-        console.log(`[FCM] Purged ${tokensToRemove.length} expired token(s).`);
+        console.log(`[FCM] Purged ${tokensToRemove.length} expired/invalid token(s).`);
       }
     }
 
@@ -209,6 +236,8 @@ const sendNewOrderNotification = async (order) => {
       } else {
         console.log(`[FCM Sim] [Superadmin] Order #${invoice} for ₹${totalAmount} from ${customerName}.`);
       }
+    } else {
+      console.warn(`[FCM] No registered Superadmin device tokens found for Order #${invoice}. (Token count: 0 in DB)`);
     }
 
     // =========================================================================
@@ -244,6 +273,8 @@ const sendNewOrderNotification = async (order) => {
       } else {
         console.log(`[FCM Sim] [Delivery] Order #${invoice} ready for delivery in ${deliveryCity}.`);
       }
+    } else {
+      console.log(`[FCM] No registered Delivery Boy device tokens found for Order #${invoice}.`);
     }
 
     // =========================================================================
@@ -321,5 +352,6 @@ module.exports = {
   initFirebase,
   registerFcmToken,
   unregisterFcmToken,
+  sendMulticast,
   sendNewOrderNotification,
 };
