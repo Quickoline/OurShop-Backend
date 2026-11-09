@@ -324,6 +324,36 @@ const toggleNewsletter = async (req, res) => {
     }
 };
 
+const updateFcmToken = async (req, res) => {
+    try {
+        const userId = req.user?.id || req.user?._id;
+        const { fcmToken } = req.body;
+        if (!fcmToken || typeof fcmToken !== "string") {
+            return res.status(400).json({ success: false, message: "Valid fcmToken is required" });
+        }
+        const { registerFcmToken } = require("../../../services/notificationService");
+        await registerFcmToken(userId, fcmToken);
+        res.status(200).json({ success: true, message: "FCM token registered successfully" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const removeFcmToken = async (req, res) => {
+    try {
+        const userId = req.user?.id || req.user?._id;
+        const { fcmToken } = req.body;
+        if (!fcmToken || typeof fcmToken !== "string") {
+            return res.status(400).json({ success: false, message: "Valid fcmToken is required" });
+        }
+        const { unregisterFcmToken } = require("../../../services/notificationService");
+        await unregisterFcmToken(userId, fcmToken);
+        res.status(200).json({ success: true, message: "FCM token removed successfully" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     createUser,
     getAllUsers,
@@ -340,4 +370,6 @@ module.exports = {
     removeFromWishlist,
     getWishlist,
     toggleNewsletter,
+    updateFcmToken,
+    removeFcmToken,
 };

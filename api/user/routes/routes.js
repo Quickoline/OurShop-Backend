@@ -15,6 +15,8 @@ const {
     removeFromWishlist,
     getWishlist,
     toggleNewsletter,
+    updateFcmToken,
+    removeFcmToken,
 } = require("../controller/controller");
 const {
     authenticate,
@@ -23,6 +25,9 @@ const {
 } = require("../../../auth/auth");
 
 const router = express.Router();
+
+router.post("/fcm-token", authenticate, updateFcmToken);
+router.delete("/fcm-token", authenticate, removeFcmToken);
 
 router.get("/email/:email", authenticate, authorizeRoles("admin"), getUserByEmail);
 

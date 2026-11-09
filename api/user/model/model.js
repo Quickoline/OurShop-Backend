@@ -98,6 +98,13 @@ const userSchema = new mongoose.Schema(
         phone: String,
       },
     ],
+
+    fcmTokens: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
   },
   { timestamps: true }
 );

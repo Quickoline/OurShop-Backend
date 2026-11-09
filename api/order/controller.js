@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const services = require("./services");
 const { normalizeJwtSubjectId } = require("../../auth/auth");
 const { DeliveryWallet, DeliveryWalletTransaction } = require("../wallet/deliveryWalletModel");
+const { sendNewOrderNotification } = require("../../services/notificationService");
 const jwt = require("jsonwebtoken");
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-jwt-secret";
@@ -46,6 +47,11 @@ const create = async (req, res) => {
     }
 
     const data = await services.create(body);
+
+    // Fire FCM notification to admins asynchronously
+    sendNewOrderNotification(data).catch((notifyErr) =>
+      console.error("[FCM] Order notification dispatch failed:", notifyErr.message)
+    );
 
     res.status(201).json({
       success: true,
