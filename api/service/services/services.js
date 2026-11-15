@@ -19,7 +19,12 @@ const applyDynamicDiscountFields = (data = {}) => {
     data.discountPercentage !== "" &&
     Number.isFinite(Number(data.discountPercentage));
 
-  if (!hasPrice) return data;
+  if (!hasPrice) {
+    data.price = Number.isFinite(price) ? price : 0;
+    data.priceAfterDiscount = 0;
+    data.discountPercentage = 0;
+    return data;
+  }
 
   if (hasPriceAfterDiscount) {
     const pad = Math.max(0, Math.min(price, Number(data.priceAfterDiscount)));

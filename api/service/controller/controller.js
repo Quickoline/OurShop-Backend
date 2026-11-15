@@ -66,8 +66,11 @@ const parseServiceBody = (body) => {
   ];
 
   numberFields.forEach((field) => {
-    if (parsed[field] !== undefined && parsed[field] !== "") {
-      parsed[field] = Number(parsed[field]);
+    if (parsed[field] !== undefined && parsed[field] !== "" && parsed[field] !== null) {
+      const num = Number(parsed[field]);
+      parsed[field] = Number.isFinite(num) ? num : 0;
+    } else if (parsed[field] === "" || parsed[field] === null) {
+      parsed[field] = 0;
     }
   });
 

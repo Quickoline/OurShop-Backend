@@ -33,7 +33,7 @@ const serviceSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0,
-      required: true,
+      required: false,
     },
     priceAfterDiscount: {
       type: Number,
