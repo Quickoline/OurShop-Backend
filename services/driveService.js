@@ -292,6 +292,14 @@ function checkAuthStatus() {
     }
   }
 
+  let serviceAccountEmail = null;
+  if (hasServiceAccount) {
+    try {
+      const sa = JSON.parse(fs.readFileSync(credsPath, "utf8"));
+      serviceAccountEmail = sa.client_email || null;
+    } catch (e) {}
+  }
+
   const authenticated = hasServiceAccount || oauthAuthenticated;
 
   return {
@@ -303,6 +311,7 @@ function checkAuthStatus() {
         : hasServiceAccount
         ? "service_account"
         : "oauth2",
+    serviceAccountEmail,
     folderId: cachedFolderId || process.env.GOOGLE_DRIVE_FOLDER_ID || null,
   };
 }
@@ -344,7 +353,6 @@ async function uploadFileToDrive(buffer, fileName, mimeType) {
   }
 
   const clientsToTry = [];
-  if (saAuth) clientsToTry.push({ client: saAuth, type: "service_account" });
   if (
     oauthClient &&
     oauthClient.credentials &&
@@ -352,6 +360,7 @@ async function uploadFileToDrive(buffer, fileName, mimeType) {
   ) {
     clientsToTry.push({ client: oauthClient, type: "oauth2" });
   }
+  if (saAuth) clientsToTry.push({ client: saAuth, type: "service_account" });
 
   let lastError = null;
   for (const { client, type } of clientsToTry) {
