@@ -13,7 +13,6 @@ const {
     searchProductsService
 } = require("../services/services");
 const { uploadMedia } = require("../../../services/mediaStorageService");
-const { uploadBufferToS3 } = require("../../../config/s3");
 const { normalizeJwtSubjectId } = require("../../../auth/auth");
 const jwt = require("jsonwebtoken");
 const User = require("../../user/model/model");
