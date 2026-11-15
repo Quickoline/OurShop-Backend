@@ -12,6 +12,7 @@ const {
     getRelatedProductsService,
     searchProductsService
 } = require("../services/services");
+const { uploadMedia } = require("../../../services/mediaStorageService");
 const { uploadBufferToS3 } = require("../../../config/s3");
 const { normalizeJwtSubjectId } = require("../../../auth/auth");
 const jwt = require("jsonwebtoken");
@@ -78,6 +79,7 @@ const createProduct = async (req, res) => {
         const payload = parseProductBody(req.body);
         const imgCoverFile = req.files?.imgCover?.[0];
         const imageFiles = req.files?.images || [];
+        const videoFiles = req.files?.videos || (req.files?.video ? [req.files.video[0]] : []);
 
         if (!imgCoverFile) {
             return res.status(400).json({
@@ -86,21 +88,44 @@ const createProduct = async (req, res) => {
             });
         }
 
-        payload.imgCover = await uploadBufferToS3({
+        const coverResult = await uploadMedia({
             buffer: imgCoverFile.buffer,
-            mimeType: imgCoverFile.mimetype,
-            keyPrefix: "products/covers",
+            originalname: imgCoverFile.originalname,
+            mimetype: imgCoverFile.mimetype,
+            folder: "products/covers",
         });
+        payload.imgCover = coverResult.url;
 
-        payload.images = await Promise.all(
-            imageFiles.map((file) =>
-                uploadBufferToS3({
-                    buffer: file.buffer,
-                    mimeType: file.mimetype,
-                    keyPrefix: "products/gallery",
-                })
-            )
-        );
+        if (imageFiles.length) {
+            const galleryResults = await Promise.all(
+                imageFiles.map((file) =>
+                    uploadMedia({
+                        buffer: file.buffer,
+                        originalname: file.originalname,
+                        mimetype: file.mimetype,
+                        folder: "products/gallery",
+                    })
+                )
+            );
+            payload.images = galleryResults.map((r) => r.url);
+        }
+
+        if (videoFiles.length) {
+            const videoResults = await Promise.all(
+                videoFiles.map((file) =>
+                    uploadMedia({
+                        buffer: file.buffer,
+                        originalname: file.originalname,
+                        mimetype: file.mimetype,
+                        folder: "products/videos",
+                    })
+                )
+            );
+            payload.videos = videoResults.map((r) => r.url);
+            if (payload.videos.length > 0) {
+                payload.videoCover = payload.videos[0];
+            }
+        }
 
         // Auto-assign vendor for vendors, allow setting for superadmins
         if (req.user?.role === "vendor") {
@@ -188,6 +213,7 @@ const updateProduct = async (req, res) => {
         const payload = parseProductBody(req.body);
         const imgCoverFile = req.files?.imgCover?.[0];
         const imageFiles = req.files?.images || [];
+        const videoFiles = req.files?.videos || (req.files?.video ? [req.files.video[0]] : []);
 
         const existingProduct = await getProductByIdService(req.params.id);
         if (!existingProduct) {
@@ -206,23 +232,44 @@ const updateProduct = async (req, res) => {
         }
 
         if (imgCoverFile) {
-            payload.imgCover = await uploadBufferToS3({
+            const coverResult = await uploadMedia({
                 buffer: imgCoverFile.buffer,
-                mimeType: imgCoverFile.mimetype,
-                keyPrefix: "products/covers",
+                originalname: imgCoverFile.originalname,
+                mimetype: imgCoverFile.mimetype,
+                folder: "products/covers",
             });
+            payload.imgCover = coverResult.url;
         }
 
         if (imageFiles.length) {
-            payload.images = await Promise.all(
+            const galleryResults = await Promise.all(
                 imageFiles.map((file) =>
-                    uploadBufferToS3({
+                    uploadMedia({
                         buffer: file.buffer,
-                        mimeType: file.mimetype,
-                        keyPrefix: "products/gallery",
+                        originalname: file.originalname,
+                        mimetype: file.mimetype,
+                        folder: "products/gallery",
                     })
                 )
             );
+            payload.images = galleryResults.map((r) => r.url);
+        }
+
+        if (videoFiles.length) {
+            const videoResults = await Promise.all(
+                videoFiles.map((file) =>
+                    uploadMedia({
+                        buffer: file.buffer,
+                        originalname: file.originalname,
+                        mimetype: file.mimetype,
+                        folder: "products/videos",
+                    })
+                )
+            );
+            payload.videos = videoResults.map((r) => r.url);
+            if (payload.videos.length > 0) {
+                payload.videoCover = payload.videos[0];
+            }
         }
 
         // Vendors cannot change vendor of products

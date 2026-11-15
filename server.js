@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 require("dotenv").config();
 
 const connectDB = require("./config/db");
@@ -16,6 +17,7 @@ const cartRoutes = require("./api/cart/routes");
 const wishlistRoutes = require("./api/wishlist/routes");
 const orderRoutes = require("./api/order/routes");
 const walletRoutes = require("./api/wallet/routes");
+const driveRoutes = require("./routes/driveRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -49,6 +51,8 @@ app.get("/", (req, res) => {
   });
 });
 
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 app.use("/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/product", productRoutes);
@@ -61,6 +65,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/order", orderRoutes);
 app.use("/api/wallet", walletRoutes);
+app.use("/api/drive", driveRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

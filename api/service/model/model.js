@@ -18,6 +18,8 @@ const serviceSchema = new mongoose.Schema(
     },
     imgCover: { type: String },
     images: { type: [String] },
+    videoCover: { type: String },
+    videos: { type: [String], default: [] },
     description: {
       type: String,
       maxlength: [5000, "Description should be less than or equal to 5000"],
