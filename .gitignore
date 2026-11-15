@@ -7,6 +7,15 @@ node_modules/
 .env.*.local
 serviceAccountKey.json
 config/serviceAccountKey.json
+tokens.json
+config/tokens.json
+config/drive-tokens.json
+config/quickoshop-oauth.json
+config/google-oauth.json
+config/drive-service-account.json
+credentials.json
+config/credentials.json
+uploads/
 
 # logs
 logs

@@ -16,7 +16,7 @@ const getExtensionFromMime = (mimeType = "") => {
 
 /**
  * Universal media uploader for products and services
- * Prioritizes Google Drive storage (like in Rbharat)
+ * Prioritizes QuickoShop Google Drive cloud storage
  * Falls back safely to local disk (/uploads/) if Google Drive is pending authentication
  */
 const uploadMedia = async ({ buffer, originalname, mimetype, folder = "products" }) => {
