@@ -16,6 +16,16 @@ router.get("/status", (req, res) => {
   res.json({ success: true, ...status });
 });
 
+// Direct browser connect route (clean 302 redirect directly to Google consent screen)
+router.get("/connect", (req, res) => {
+  try {
+    const url = driveService.getAuthUrl();
+    res.redirect(url);
+  } catch (err) {
+    res.status(400).send("Configuration error: " + err.message);
+  }
+});
+
 // Get Google OAuth authorization URL
 router.get("/auth-url", (req, res) => {
   try {
