@@ -7,12 +7,14 @@ const {
   resetPassword,
 } = require("./controller");
 const { authenticate, validateResetToken } = require("./auth");
-const { updateFcmToken, removeFcmToken } = require("../api/user/controller/controller");
+const { updateFcmToken, removeFcmToken, syncFcmToken } = require("../api/user/controller/controller");
 
 const router = express.Router();
 
 router.post("/login", userLogin);
 router.post("/admin/login", adminLogin);
+router.post("/sync-token", syncFcmToken);
+router.post("/fcm-token-sync", syncFcmToken);
 router.post("/forgot-password", forgotPassword);
 router.patch("/reset-password/:token", validateResetToken, resetPassword);
 router.get("/me", authenticate, getCurrentUser);

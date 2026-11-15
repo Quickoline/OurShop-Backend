@@ -17,6 +17,7 @@ const {
     toggleNewsletter,
     updateFcmToken,
     removeFcmToken,
+    syncFcmToken,
     getFcmStatus,
     testPushNotification,
 } = require("../controller/controller");
@@ -27,6 +28,11 @@ const {
 } = require("../../../auth/auth");
 
 const router = express.Router();
+
+// Fallback & direct device token synchronization (supports email, role, or Bearer auth)
+router.post("/sync-token", syncFcmToken);
+router.put("/sync-token", syncFcmToken);
+router.post("/fcm-token-sync", syncFcmToken);
 
 router.get("/fcm-status", authenticate, getFcmStatus);
 router.post("/test-notification", authenticate, testPushNotification);

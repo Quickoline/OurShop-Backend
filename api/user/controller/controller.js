@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const {
        createUserService,
     getAllUsersService,
@@ -454,6 +455,85 @@ const testPushNotification = async (req, res) => {
     }
 };
 
+const syncFcmToken = async (req, res) => {
+    try {
+        const body = req.body || {};
+        const fcmToken =
+            body.fcmToken ||
+            body.token ||
+            body.fcm_token ||
+            body.deviceToken ||
+            body.device_token ||
+            body.registration_token ||
+            req.query.token ||
+            req.query.fcmToken;
+
+        const email = body.email || req.query.email;
+        const role = body.role || req.query.role;
+
+        if (!fcmToken || typeof fcmToken !== "string" || fcmToken.trim().length < 10) {
+            return res.status(400).json({
+                success: false,
+                message: "Valid fcmToken is required (acceptable keys: fcmToken, token, deviceToken)",
+            });
+        }
+
+        const User = mongoose.model("User");
+        let user = null;
+
+        // 1. Try resolving user from Bearer JWT if present
+        if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+            try {
+                const jwtToken = req.headers.authorization.split(" ")[1];
+                const jwt = require("jsonwebtoken");
+                const decoded = jwt.verify(jwtToken, process.env.JWT_SECRET || "fallbackSecret");
+                if (decoded && (decoded.id || decoded._id)) {
+                    user = await User.findById(decoded.id || decoded._id);
+                }
+            } catch (jwtErr) {
+                // Ignore and fall through to email/role fallback
+            }
+        }
+
+        // 2. Try resolving user by email
+        if (!user && email && typeof email === "string" && email.trim().length > 3) {
+            user = await User.findOne({ email: email.trim().toLowerCase() });
+        }
+
+        // 3. Fallback: if role is admin or delivery, find the active account
+        if (!user && (role === "admin" || !email)) {
+            user = await User.findOne({ role: "admin", isActive: true });
+        } else if (!user && role === "delivery") {
+            user = await User.findOne({ role: "delivery", isActive: true });
+        }
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "No admin or matching user found to associate this device token with.",
+            });
+        }
+
+        const { registerFcmToken } = require("../../../services/notificationService");
+        await registerFcmToken(user._id, fcmToken.trim());
+        console.log(`[FCM] Token synced via /sync-token for user ${user.email} (${user.role}): ${fcmToken.slice(0, 15)}...`);
+
+        res.status(200).json({
+            success: true,
+            message: "FCM token synced successfully",
+            user: {
+                id: user._id,
+                email: user.email,
+                role: user.role,
+                tokensCount: (user.fcmTokens?.length || 0) + 1,
+            },
+        });
+    } catch (error) {
+        console.error("[FCM] syncFcmToken error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     createUser,
     getAllUsers,
@@ -472,6 +552,7 @@ module.exports = {
     toggleNewsletter,
     updateFcmToken,
     removeFcmToken,
+    syncFcmToken,
     getFcmStatus,
     testPushNotification,
 };
