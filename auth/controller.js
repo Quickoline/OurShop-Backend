@@ -6,6 +6,7 @@ const sanitizeUser = (user) => ({
   _id: user._id,
   name: user.name,
   email: user.email,
+  phone: user.phone || "",
   role: user.role,
   blocked: user.blocked,
   isActive: user.isActive,
@@ -13,6 +14,7 @@ const sanitizeUser = (user) => ({
   referralCode: user.referralCode,
   walletBalance: user.walletBalance ?? 0,
   sponsor: user.sponsor,
+  addresses: user.addresses || [],
 });
 
 const login = async (req, res, requiredRole = null) => {

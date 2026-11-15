@@ -91,11 +91,20 @@ const userSchema = new mongoose.Schema(
 
     addresses: [
       {
-        city: String,
+        fullName: String,
+        name: String,
+        phone: String,
         street: String,
+        addressLine1: String,
+        addressLine2: String,
+        landmark: String,
+        city: String,
         state: String,
         pincode: String,
-        phone: String,
+        postalCode: String,
+        country: { type: String, default: "India" },
+        addressType: { type: String, default: "Home" },
+        isDefault: { type: Boolean, default: false },
       },
     ],
 

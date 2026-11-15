@@ -178,9 +178,29 @@ const toggleUserBlocked = async (req, res) => {
     }
 };
 
+const getAddresses = async (req, res) => {
+    try {
+        const userId = req.params.id || req.user?.id || req.user?._id;
+        const user = await getUserByIdService(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+        res.status(200).json({
+            success: true,
+            data: user.addresses || [],
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 const addAddress = async (req, res) => {
     try{
-        const user = await addAddressService(req.params.id, req.body);
+        const userId = req.params.id || req.user?.id || req.user?._id;
+        const user = await addAddressService(userId, req.body);
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -199,8 +219,9 @@ const addAddress = async (req, res) => {
 
 const updateAddress = async (req, res) => {
     try{
+        const userId = req.params.id || req.user?.id || req.user?._id;
         const user = await updateAddressService(
-            req.params.id,
+            userId,
             req.params.addressId,
             req.body
         );
@@ -212,7 +233,7 @@ const updateAddress = async (req, res) => {
         }
         res.status(200).json({
             success: true,
-            message: "Address updates successfully",
+            message: "Address updated successfully",
             data: user.addresses,
         });
     } catch (error) {
@@ -222,7 +243,8 @@ const updateAddress = async (req, res) => {
 
 const deleteAddress = async (req, res) => {
     try{
-        const user = await deleteAddressService(req.params.id, req.params.addressId);
+        const userId = req.params.id || req.user?.id || req.user?._id;
+        const user = await deleteAddressService(userId, req.params.addressId);
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -543,6 +565,7 @@ module.exports = {
     deleteUser,
     updateUserPassword,
     toggleUserBlocked,
+    getAddresses,
     addAddress,
     updateAddress,
     deleteAddress,

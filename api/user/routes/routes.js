@@ -8,6 +8,7 @@ const {
     deleteUser,
     updateUserPassword,
     toggleUserBlocked,
+    getAddresses,
     addAddress,
     updateAddress,
     deleteAddress,
@@ -54,9 +55,21 @@ router.post("/:id/wishlist", authenticate, allowSelfOrAdmin("id"), addToWishlist
 router.delete("/:id/wishlist/:productId", authenticate, allowSelfOrAdmin("id"), removeFromWishlist);
 
 
+// Address CRUD - supports standard /addresses alongside legacy typo /addressess
+router.get("/:id/addresses", authenticate, allowSelfOrAdmin("id"), getAddresses);
+router.get("/:id/addressess", authenticate, allowSelfOrAdmin("id"), getAddresses);
+router.post("/:id/addresses", authenticate, allowSelfOrAdmin("id"), addAddress);
 router.post("/:id/addressess", authenticate, allowSelfOrAdmin("id"), addAddress);
+router.put("/:id/addresses/:addressId", authenticate, allowSelfOrAdmin("id"), updateAddress);
 router.put("/:id/addressess/:addressId", authenticate, allowSelfOrAdmin("id"), updateAddress);
+router.delete("/:id/addresses/:addressId", authenticate, allowSelfOrAdmin("id"), deleteAddress);
 router.delete("/:id/addressess/:addressId", authenticate, allowSelfOrAdmin("id"), deleteAddress);
+
+// Current user direct address shortcuts
+router.get("/addresses", authenticate, getAddresses);
+router.post("/addresses", authenticate, addAddress);
+router.put("/addresses/:addressId", authenticate, updateAddress);
+router.delete("/addresses/:addressId", authenticate, deleteAddress);
 
 router.patch("/:id/block", authenticate, authorizeRoles("admin"), toggleUserBlocked);
 router.patch("/:id/newsletter", authenticate, allowSelfOrAdmin("id"), toggleNewsletter);
