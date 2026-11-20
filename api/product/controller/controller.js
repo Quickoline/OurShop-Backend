@@ -70,6 +70,17 @@ const parseProductBody = (body) => {
     if (parsed.sizeOptions !== undefined) parsed.sizeOptions = parseMaybeJsonObjectArray(parsed.sizeOptions);
     if (parsed.useBy !== undefined && parsed.useBy !== "") parsed.useBy = new Date(parsed.useBy);
 
+    // Support camelCase subCategory or empty/null subcategory
+    if (parsed.subCategory !== undefined) {
+        if (parsed.subCategory && parsed.subCategory !== "null" && parsed.subCategory !== "undefined") {
+            parsed.subcategory = parsed.subCategory;
+        }
+        delete parsed.subCategory;
+    }
+    if (parsed.subcategory === "" || parsed.subcategory === "null" || parsed.subcategory === "undefined" || !parsed.subcategory) {
+        parsed.subcategory = null;
+    }
+
     return parsed;
 };
 
