@@ -86,6 +86,20 @@ const parseServiceBody = (body) => {
     parsed.specifications = parseMaybeJsonObjectArray(parsed.specifications);
   }
 
+  // Support camelCase subCategory or empty/null subcategory
+  if (parsed.subCategory !== undefined) {
+    if (parsed.subCategory && parsed.subCategory !== "null" && parsed.subCategory !== "undefined") {
+      parsed.subcategory = parsed.subCategory;
+    }
+    delete parsed.subCategory;
+  }
+  if (parsed.subcategory === "" || parsed.subcategory === "null" || parsed.subcategory === "undefined" || !parsed.subcategory) {
+    parsed.subcategory = null;
+  }
+  if (parsed.brand === "" || parsed.brand === "null" || parsed.brand === "undefined" || !parsed.brand) {
+    parsed.brand = null;
+  }
+
   return parsed;
 };
 

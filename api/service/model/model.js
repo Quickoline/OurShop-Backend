@@ -80,10 +80,14 @@ const serviceSchema = new mongoose.Schema(
     subcategory: {
       type: Schema.Types.ObjectId,
       ref: "category",
+      required: false,
+      default: null,
     },
     brand: {
       type: Schema.Types.ObjectId,
       ref: "brand",
+      required: false,
+      default: null,
     },
     tags: [
       {
