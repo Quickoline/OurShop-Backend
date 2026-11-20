@@ -154,6 +154,15 @@ const createService = async (req, res) => {
       if (payload.videos.length > 0) {
         payload.videoCover = payload.videos[0];
       }
+    } else if (
+      req.body.deleteVideo === "true" ||
+      req.body.deleteVideo === true ||
+      req.body.removeVideo === "true" ||
+      req.body.removeVideo === true ||
+      payload.deleteVideo
+    ) {
+      payload.videos = [];
+      payload.videoCover = "";
     }
 
     // Auto-assign vendor for vendors, allow setting for superadmins
@@ -299,6 +308,15 @@ const updateService = async (req, res) => {
       if (payload.videos.length > 0) {
         payload.videoCover = payload.videos[0];
       }
+    } else if (
+      req.body.deleteVideo === "true" ||
+      req.body.deleteVideo === true ||
+      req.body.removeVideo === "true" ||
+      req.body.removeVideo === true ||
+      payload.deleteVideo
+    ) {
+      payload.videos = [];
+      payload.videoCover = "";
     }
 
     // Vendors cannot change vendor field
@@ -307,6 +325,9 @@ const updateService = async (req, res) => {
     } else if (req.user?.role === "admin" && req.body.vendor) {
       payload.vendor = req.body.vendor;
     }
+
+    delete payload.deleteVideo;
+    delete payload.removeVideo;
 
     const service = await updateServiceService(req.params.id, payload);
     if (!service) {

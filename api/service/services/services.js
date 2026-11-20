@@ -92,7 +92,15 @@ const getAllServicesService = async (queryParams = {}) => {
   }
 
   if (search) {
-    filter.$text = { $search: search };
+    const cleanSearch = String(search).trim();
+    if (cleanSearch) {
+      const escaped = cleanSearch.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+      const searchRegex = new RegExp(escaped, "i");
+      filter.$or = [
+        { title: searchRegex },
+        { description: searchRegex }
+      ];
+    }
   }
 
   const skip = (Number(page) - 1) * Number(limit);
@@ -240,8 +248,15 @@ const getRelatedServicesService = async (serviceId, limit = 6) => {
 };
 
 const searchServicesService = async (searchQuery, limit = 20) => {
+  const cleanSearch = String(searchQuery || "").trim();
+  if (!cleanSearch) return [];
+  const escaped = cleanSearch.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+  const searchRegex = new RegExp(escaped, "i");
   return await Service.find({
-    $text: { $search: searchQuery },
+    $or: [
+      { title: searchRegex },
+      { description: searchRegex }
+    ],
     isActive: true,
   })
     .select(

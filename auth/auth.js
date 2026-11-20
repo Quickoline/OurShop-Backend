@@ -125,7 +125,7 @@ const allowSelfOrAdmin = (paramKey = "id") => {
 
 const validateResetToken = async (req, res, next) => {
   try {
-    const { token } = req.params;
+    const token = req.params.token || req.body.token || req.query.token;
 
     if (!token) {
       return res.status(400).json({

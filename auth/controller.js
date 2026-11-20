@@ -184,7 +184,8 @@ const forgotPassword = async (req, res) => {
     return res.status(200).json({
       success: true,
       message:
-        "Use the reset link below to choose a new password. The link expires in 10 minutes.",
+        "Password reset token generated successfully. The link expires in 10 minutes.",
+      resetToken,
       resetUrl,
     });
   } catch (error) {
@@ -197,7 +198,7 @@ const forgotPassword = async (req, res) => {
 
 const resetPassword = async (req, res) => {
   try {
-    const { newPassword } = req.body;
+    const newPassword = req.body.newPassword || req.body.password;
     const user = req.resetUser;
 
     if (!newPassword || newPassword.length < 6) {

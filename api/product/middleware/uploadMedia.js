@@ -18,11 +18,22 @@ const fileFilter = (req, file, cb) => {
     mime === "application/quicktime";
 
   const isExtAllowed = ALLOWED_MEDIA_REGEX.test(file.originalname || "");
+  const isGenericMime =
+    !mime ||
+    mime.includes("octet-stream") ||
+    mime.includes("binary") ||
+    mime === "application/octet-stream";
 
-  // Accept if valid MIME or valid extension (crucial for Android/Flutter which often sends application/octet-stream)
-  if (isMimeAllowed || isExtAllowed || mime === "application/octet-stream") {
+  const isKnownMediaField =
+    file.fieldname === "videos" ||
+    file.fieldname === "video" ||
+    file.fieldname === "imgCover" ||
+    file.fieldname === "images";
+
+  // Accept if valid MIME, valid extension, generic stream, or known media field
+  if (isMimeAllowed || isExtAllowed || isGenericMime || isKnownMediaField) {
     // Normalize mimetype on the file object
-    if (!isMimeAllowed || mime === "application/octet-stream") {
+    if (!isMimeAllowed || isGenericMime) {
       if (ext === ".mp4" || ext === ".m4v") file.mimetype = "video/mp4";
       else if (ext === ".mov") file.mimetype = "video/quicktime";
       else if (ext === ".mkv") file.mimetype = "video/x-matroska";
@@ -33,6 +44,13 @@ const fileFilter = (req, file, cb) => {
       else if (ext === ".png") file.mimetype = "image/png";
       else if (ext === ".webp") file.mimetype = "image/webp";
       else if (ext === ".gif") file.mimetype = "image/gif";
+      else if (file.fieldname === "videos" || file.fieldname === "video") {
+        file.mimetype = "video/mp4";
+        if (!ext) file.originalname = `${file.originalname || "video"}.mp4`;
+      } else {
+        file.mimetype = "image/jpeg";
+        if (!ext) file.originalname = `${file.originalname || "image"}.jpg`;
+      }
     }
     cb(null, true);
   } else {

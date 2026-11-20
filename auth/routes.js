@@ -17,6 +17,8 @@ router.post("/sync-token", syncFcmToken);
 router.post("/fcm-token-sync", syncFcmToken);
 router.post("/forgot-password", forgotPassword);
 router.patch("/reset-password/:token", validateResetToken, resetPassword);
+router.post("/reset-password/:token", validateResetToken, resetPassword);
+router.post("/reset-password", validateResetToken, resetPassword);
 router.get("/me", authenticate, getCurrentUser);
 router.post("/fcm-token", authenticate, updateFcmToken);
 router.put("/fcm-token", authenticate, updateFcmToken);
