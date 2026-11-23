@@ -148,12 +148,12 @@ function getAuthUrl() {
 
   const scopes = [
     "https://www.googleapis.com/auth/drive",
-    "email",
+    "https://www.googleapis.com/auth/userinfo.email",
   ];
 
   return oauth2Client.generateAuthUrl({
     access_type: "offline",
-    prompt: "consent",
+    prompt: "select_account consent",
     scope: scopes,
   });
 }
@@ -401,7 +401,18 @@ async function uploadFileToDrive(buffer, fileName, mimeType) {
       };
     } catch (err) {
       console.warn(`[QuickoShop Drive Upload (${type}) Notice]:`, err.message);
-      lastError = err;
+      if (
+        err.message &&
+        (err.message.includes("invalid_grant") ||
+          err.message.includes("expired or revoked") ||
+          err.message.includes("storage quota"))
+      ) {
+        lastError = new Error(
+          "Google Drive connection has expired. Please re-link in browser: https://api.quickoshop.com/api/drive/connect"
+        );
+      } else {
+        lastError = err;
+      }
     }
   }
 
