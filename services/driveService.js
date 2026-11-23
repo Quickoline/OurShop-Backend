@@ -358,8 +358,10 @@ async function uploadFileToDrive(buffer, fileName, mimeType) {
     (oauthClient.credentials.access_token || oauthClient.credentials.refresh_token)
   ) {
     clientsToTry.push({ client: oauthClient, type: "oauth2" });
+  } else if (saAuth) {
+    // Only fallback to Service Account if OAuth credentials are not present
+    clientsToTry.push({ client: saAuth, type: "service_account" });
   }
-  if (saAuth) clientsToTry.push({ client: saAuth, type: "service_account" });
 
   let lastError = null;
   for (const { client, type } of clientsToTry) {
@@ -401,14 +403,15 @@ async function uploadFileToDrive(buffer, fileName, mimeType) {
       };
     } catch (err) {
       console.warn(`[QuickoShop Drive Upload (${type}) Notice]:`, err.message);
+      const errMsg = (err.message || "").toLowerCase();
       if (
-        err.message &&
-        (err.message.includes("invalid_grant") ||
-          err.message.includes("expired or revoked") ||
-          err.message.includes("storage quota"))
+        errMsg.includes("invalid_grant") ||
+        errMsg.includes("expired or revoked") ||
+        errMsg.includes("storage quota") ||
+        errMsg.includes("service accounts do not have storage quota")
       ) {
         lastError = new Error(
-          "Google Drive connection has expired. Please re-link in browser: https://api.quickoshop.com/api/drive/connect"
+          "Google Drive connection expired or requires authorization. Please re-link in browser: https://api.quickoshop.com/api/drive/connect"
         );
       } else {
         lastError = err;
